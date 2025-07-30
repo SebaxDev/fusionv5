@@ -62,7 +62,7 @@ app_state = AppState()
 
 # Detectar dispositivo móvil
 def is_mobile():
-    user_agent = st.experimental_get_query_params().get("user_agent", [""])[0]
+    user_agent = st.query_params.get("user_agent", [""])[0]
     mobile_keywords = ['iphone', 'android', 'mobile', 'ipad', 'tablet']
     return any(keyword in user_agent.lower() for keyword in mobile_keywords)
 
