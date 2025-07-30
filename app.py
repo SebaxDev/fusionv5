@@ -60,16 +60,30 @@ app_state = AppState()
 # INICIALIZACIONES
 # --------------------------
 
+# Detectar dispositivo móvil
+def is_mobile():
+    user_agent = st.experimental_get_query_params().get("user_agent", [""])[0]
+    mobile_keywords = ['iphone', 'android', 'mobile', 'ipad', 'tablet']
+    return any(keyword in user_agent.lower() for keyword in mobile_keywords)
+
 # Configuración de página
-st.set_page_config(
-    page_title="Fusion Reclamos App",
-    page_icon="📋",
-    layout="wide",
-    initial_sidebar_state="collapsed",
-    menu_items={
-        'About': "Sistema de gestión de reclamos v2.0"
-    }
-)
+if is_mobile():
+    st.set_page_config(
+        page_title="Fusion Reclamos",
+        page_icon="📋",
+        layout="centered",
+        initial_sidebar_state="collapsed"
+    )
+else:
+    st.set_page_config(
+        page_title="Fusion Reclamos App",
+        page_icon="📋",
+        layout="wide",
+        initial_sidebar_state="collapsed",
+        menu_items={
+            'About': "Sistema de gestión de reclamos v2.0"
+        }
+    )
 
 # Inyectar estilos CSS personalizados
 st.markdown("""
@@ -77,6 +91,32 @@ st.markdown("""
     /* Estilos generales */
     .stApp {
         background-color: #f8f9fa;
+    }
+    
+    /* Estilos para móviles */
+    @media screen and (max-width: 768px) {
+        .stTextInput>div>div>input, 
+        .stSelectbox>div>div>select,
+        .stTextArea>div>textarea {
+            font-size: 16px !important;
+        }
+        
+        .stButton>button {
+            width: 100% !important;
+            margin: 5px 0 !important;
+        }
+        
+        .stMarkdown h1 {
+            font-size: 1.5rem !important;
+        }
+        
+        .stMarkdown h2 {
+            font-size: 1.3rem !important;
+        }
+        
+        .stDataFrame {
+            font-size: 14px !important;
+        }
     }
     
     /* Header principal */
@@ -359,41 +399,72 @@ st.session_state.df_clientes = df_clientes
 # INTERFAZ PRINCIPAL
 # --------------------------
 st.markdown("---")
-# Header con gradiente
-st.markdown("""
-<div style="
-    background: linear-gradient(135deg, #3498db, #2c3e50);
-    padding: 1.5rem;
-    border-radius: 10px;
-    color: white;
-    margin-bottom: 2rem;
-">
-    <h1 style="margin:0; color:white;">📋 Fusion Reclamos App</h1>
-    <p style="margin:0; opacity:0.9;">Sistema integral de gestión de reclamos técnicos</p>
-</div>
-""", unsafe_allow_html=True)
+# Header simplificado para móviles
+if is_mobile():
+    st.markdown("""
+    <div style="
+        background: linear-gradient(135deg, #3498db, #2c3e50);
+        padding: 1rem;
+        border-radius: 10px;
+        color: white;
+        margin-bottom: 1rem;
+    ">
+        <h2 style="margin:0; color:white;">📋 Fusion Reclamos</h2>
+    </div>
+    """, unsafe_allow_html=True)
+else:
+    st.markdown("""
+    <div style="
+        background: linear-gradient(135deg, #3498db, #2c3e50);
+        padding: 1.5rem;
+        border-radius: 10px;
+        color: white;
+        margin-bottom: 2rem;
+    ">
+        <h1 style="margin:0; color:white;">📋 Fusion Reclamos App</h1>
+        <p style="margin:0; opacity:0.9;">Sistema integral de gestión de reclamos técnicos</p>
+    </div>
+    """, unsafe_allow_html=True)
 
-# Dashboard de métricas mejorado
-with st.container():
-    cols = st.columns(4)
+# Dashboard simplificado para móviles
+if is_mobile():
+    cols = st.columns(2)
     total_reclamos = len(df_reclamos)
     reclamos_hoy = len(df_reclamos[df_reclamos["Fecha y hora"].dt.date == datetime.now().date()])
-    pendientes = len(df_reclamos[df_reclamos["Estado"] == "Pendiente"])
-    en_curso = len(df_reclamos[df_reclamos["Estado"] == "En curso"])
     
     with cols[0]:
-        st.metric("📊 Total Reclamos", total_reclamos, help="Reclamos históricos registrados")
+        st.metric("📅 Hoy", reclamos_hoy)
     with cols[1]:
-        st.metric("📅 Hoy", reclamos_hoy, help="Reclamos cargados hoy")
-    with cols[2]:
-        st.metric("⏳ Pendientes", pendientes, help="Reclamos pendientes de atención")
-    with cols[3]:
-        st.metric("⚙️ En Curso", en_curso, help="Reclamos siendo atendidos")
-    
-    st.markdown("---")
+        st.metric("⚙️ En Curso", len(df_reclamos[df_reclamos["Estado"] == "En curso"]))
+else:
+    with st.container():
+        cols = st.columns(4)
+        total_reclamos = len(df_reclamos)
+        reclamos_hoy = len(df_reclamos[df_reclamos["Fecha y hora"].dt.date == datetime.now().date()])
+        pendientes = len(df_reclamos[df_reclamos["Estado"] == "Pendiente"])
+        en_curso = len(df_reclamos[df_reclamos["Estado"] == "En curso"])
+        
+        with cols[0]:
+            st.metric("📊 Total Reclamos", total_reclamos, help="Reclamos históricos registrados")
+        with cols[1]:
+            st.metric("📅 Hoy", reclamos_hoy, help="Reclamos cargados hoy")
+        with cols[2]:
+            st.metric("⏳ Pendientes", pendientes, help="Reclamos pendientes de atención")
+        with cols[3]:
+            st.metric("⚙️ En Curso", en_curso, help="Reclamos siendo atendidos")
+        
+        st.markdown("---")
 
-# Navegación
-opcion = render_navigation()
+# Navegación simplificada para móviles
+if is_mobile():
+    opcion = st.selectbox(
+        "Menú principal",
+        options=["Inicio", "Reclamos cargados", "Cierre de Reclamos"],
+        index=0,
+        key="mobile_nav"
+    )
+else:
+    opcion = render_navigation()
 
 # --------------------------
 # SECCIÓN 1: INICIO - NUEVO RECLAMO
