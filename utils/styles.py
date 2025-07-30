@@ -41,7 +41,7 @@ def get_main_styles(dark_mode=False):
     }}
 
     h1 {{
-        color: var(--primary-color) !important;
+        color: white !important;
         font-weight: 700;
         margin-bottom: 1.5rem;
     }}
