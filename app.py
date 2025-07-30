@@ -1473,7 +1473,7 @@ elif opcion == "Seguimiento técnico" and user_role == 'admin':
 # --------------------------
 # SECCIÓN 6: CIERRE DE RECLAMOS
 # --------------------------
-elif opcion == "Cierre de Reclamos" and user_role == 'admin':
+elif opcion == "Cierre de Reclamos" and has_permission('cierre_reclamos'):
     st.markdown('<div class="section-container">', unsafe_allow_html=True)
     st.subheader("✅ Cierre de reclamos en curso")
 
@@ -1668,6 +1668,60 @@ elif opcion == "Cierre de Reclamos" and user_role == 'admin':
 
                 st.divider()
 
+    st.markdown("---")
+    st.markdown("### 🗑️ Limpieza de reclamos antiguos")
+    
+    # Calcular reclamos resueltos con más de 10 días
+    df_resueltos = df_reclamos[df_reclamos["Estado"] == "Resuelto"].copy()
+    df_resueltos["Dias_resuelto"] = (datetime.now() - df_resueltos["Fecha y hora"]).dt.days
+    df_antiguos = df_resueltos[df_resueltos["Dias_resuelto"] > 10]
+    
+    st.markdown(f"📅 **Reclamos resueltos con más de 10 días:** {len(df_antiguos)}")
+    
+    if len(df_antiguos) > 0:
+        if st.button("🔍 Ver reclamos antiguos", key="ver_antiguos"):
+            st.dataframe(df_antiguos[["Fecha y hora", "Nº Cliente", "Nombre", "Tipo de reclamo", "Dias_resuelto"]])
+            
+        if st.button("🗑️ Eliminar reclamos antiguos", key="eliminar_antiguos"):
+            with st.spinner("Eliminando reclamos antiguos..."):
+                try:
+                    # Obtener índices de las filas a eliminar (sumando 2 por encabezado y base 1)
+                    filas_a_eliminar = [idx + 2 for idx in df_antiguos.index]
+                    
+                    # Eliminar filas en lotes para evitar timeouts
+                    batch_size = 50
+                    for i in range(0, len(filas_a_eliminar), batch_size):
+                        batch = filas_a_eliminar[i:i + batch_size]
+                        requests = [{
+                            "deleteDimension": {
+                                "range": {
+                                    "sheetId": sheet_reclamos.id,
+                                    "dimension": "ROWS",
+                                    "startIndex": fila - 1,  # Google Sheets usa base 0
+                                    "endIndex": fila
+                                }
+                            }
+                        } for fila in batch]
+                        
+                        success, error = api_manager.safe_sheet_operation(
+                            sheet_reclamos.spreadsheet.batch_update,
+                            {"requests": requests}
+                        )
+                        
+                        if not success:
+                            st.error(f"Error al eliminar lote {i//batch_size + 1}: {error}")
+                            break
+                    
+                    if success:
+                        st.success(f"✅ Se eliminaron {len(df_antiguos)} reclamos antiguos correctamente.")
+                        st.cache_data.clear()
+                        time.sleep(3)
+                        st.rerun()
+                except Exception as e:
+                    st.error(f"❌ Error al eliminar reclamos: {str(e)}")
+                    if DEBUG_MODE:
+                        st.exception(e)
+    
     st.markdown('</div>', unsafe_allow_html=True)
 
 # --------------------------
