@@ -421,7 +421,7 @@ else:
         color: white;
         margin-bottom: 2rem;
     ">
-        <h1 style="margin:0; color:white;">📋 Fusion Reclamos App</h1>
+        <h1 style="margin:0; color:#ffffff;">📋 Fusion Reclamos App</h1>
         <p style="margin:0; opacity:0.9;">Sistema integral de gestión de reclamos técnicos</p>
     </div>
     """, unsafe_allow_html=True)
