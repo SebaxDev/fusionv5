@@ -9,6 +9,7 @@ import pytz
 import time
 from google.oauth2 import service_account
 import gspread
+from tenacity import retry, wait_exponential, stop_after_attempt
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 import io
