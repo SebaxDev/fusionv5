@@ -1672,8 +1672,19 @@ elif opcion == "Cierre de Reclamos" and has_permission('cierre_reclamos'):
     st.markdown("### 🗑️ Limpieza de reclamos antiguos")
     
     # Calcular reclamos resueltos con más de 10 días
+    # Obtener zona horaria de Argentina
+    tz_argentina = pytz.timezone("America/Argentina/Buenos_Aires")
+    
+    # Filtrar reclamos resueltos y asegurar que las fechas estén en zona horaria Argentina
     df_resueltos = df_reclamos[df_reclamos["Estado"] == "Resuelto"].copy()
-    df_resueltos["Dias_resuelto"] = (datetime.now() - df_resueltos["Fecha y hora"]).dt.days
+    
+    # Convertir fechas a datetime con zona horaria Argentina
+    df_resueltos["Fecha y hora"] = pd.to_datetime(df_resueltos["Fecha y hora"]).dt.tz_localize(tz_argentina)
+    
+    # Calcular días desde resolución (usando datetime.now() con la misma zona horaria)
+    df_resueltos["Dias_resuelto"] = (datetime.now(tz_argentina) - df_resueltos["Fecha y hora"]).dt.days
+    
+    # Filtrar reclamos con más de 10 días resueltos
     df_antiguos = df_resueltos[df_resueltos["Dias_resuelto"] > 10]
     
     st.markdown(f"📅 **Reclamos resueltos con más de 10 días:** {len(df_antiguos)}")
