@@ -65,8 +65,84 @@ st.set_page_config(
     page_title="Fusion Reclamos App",
     page_icon="📋",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="collapsed",
+    menu_items={
+        'About': "Sistema de gestión de reclamos v2.0"
+    }
 )
+
+# Inyectar estilos CSS personalizados
+st.markdown("""
+<style>
+    /* Estilos generales */
+    .stApp {
+        background-color: #f8f9fa;
+    }
+    
+    /* Header principal */
+    .st-emotion-cache-10trblm {
+        color: #2c3e50;
+        font-weight: 600;
+        border-bottom: 2px solid #3498db;
+        padding-bottom: 0.5rem;
+    }
+    
+    /* Tarjetas y contenedores */
+    .st-emotion-cache-1y4p8pa {
+        background-color: white;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        padding: 1.5rem;
+    }
+    
+    /* Botones */
+    .st-emotion-cache-7ym5gk {
+        background-color: #3498db;
+        color: white;
+        border-radius: 8px;
+        transition: all 0.3s;
+    }
+    
+    .st-emotion-cache-7ym5gk:hover {
+        background-color: #2980b9;
+        transform: translateY(-2px);
+    }
+    
+    /* Inputs y selects */
+    .stTextInput>div>div>input, 
+    .stSelectbox>div>div>select {
+        border-radius: 8px !important;
+        border: 1px solid #dfe6e9 !important;
+    }
+    
+    /* Tablas */
+    .stDataFrame {
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    /* Títulos de sección */
+    .st-emotion-cache-16txtl3 {
+        color: #2c3e50;
+        font-weight: 600;
+        margin-top: 1.5rem;
+    }
+    
+    /* Modo oscuro */
+    @media (prefers-color-scheme: dark) {
+        .stApp {
+            background-color: #121212;
+        }
+        .st-emotion-cache-1y4p8pa {
+            background-color: #1e1e1e;
+            color: #f8f9fa;
+        }
+        .st-emotion-cache-10trblm {
+            color: #f8f9fa;
+        }
+    }
+</style>
+""", unsafe_allow_html=True)
 
 # Función para detectar el modo oscuro del sistema
 def is_system_dark_mode():
@@ -96,15 +172,45 @@ if "modo_oscuro" not in st.session_state:
 
 # Sidebar con toggle para cambiar modo
 with st.sidebar:
+    st.markdown("""
+    <div style="
+        background: linear-gradient(135deg, #2c3e50, #3498db);
+        padding: 1rem;
+        border-radius: 10px;
+        color: white;
+        margin-bottom: 1.5rem;
+    ">
+        <h3 style="margin:0; color:white;">Panel de Control</h3>
+    </div>
+    """, unsafe_allow_html=True)
+    
     nuevo_modo = st.toggle(
         "🌙 Modo oscuro",
         value=st.session_state.modo_oscuro,
-        key="dark_mode_toggle"
+        key="dark_mode_toggle",
+        help="Cambiar entre tema claro y oscuro"
     )
     if nuevo_modo != st.session_state.modo_oscuro:
         st.session_state.modo_oscuro = nuevo_modo
         st.rerun()
+    
+    st.markdown("---")
     show_user_widget()
+    
+    # Mostrar información del sistema
+    st.markdown("""
+    <div style="
+        background-color: #f8f9fa;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-top: 1rem;
+        font-size: 0.8rem;
+        color: #7f8c8d;
+    ">
+        <p style="margin:0;"><strong>Versión:</strong> 2.0.1</p>
+        <p style="margin:0;"><strong>Última actualización:</strong> {}</p>
+    </div>
+    """.format(datetime.now().strftime("%d/%m/%Y %H:%M")), unsafe_allow_html=True)
 
 # Aplicar estilos personalizados según modo
 st.markdown(get_main_styles(dark_mode=st.session_state.modo_oscuro), unsafe_allow_html=True)
@@ -253,12 +359,38 @@ st.session_state.df_clientes = df_clientes
 # INTERFAZ PRINCIPAL
 # --------------------------
 st.markdown("---")
-# Header
-st.title("📋 Fusion Reclamos App")
+# Header con gradiente
+st.markdown("""
+<div style="
+    background: linear-gradient(135deg, #3498db, #2c3e50);
+    padding: 1.5rem;
+    border-radius: 10px;
+    color: white;
+    margin-bottom: 2rem;
+">
+    <h1 style="margin:0; color:white;">📋 Fusion Reclamos App</h1>
+    <p style="margin:0; opacity:0.9;">Sistema integral de gestión de reclamos técnicos</p>
+</div>
+""", unsafe_allow_html=True)
 
-# Dashboard de métricas
-render_metrics_dashboard(df_reclamos)
-st.divider()
+# Dashboard de métricas mejorado
+with st.container():
+    cols = st.columns(4)
+    total_reclamos = len(df_reclamos)
+    reclamos_hoy = len(df_reclamos[df_reclamos["Fecha y hora"].dt.date == datetime.now().date()])
+    pendientes = len(df_reclamos[df_reclamos["Estado"] == "Pendiente"])
+    en_curso = len(df_reclamos[df_reclamos["Estado"] == "En curso"])
+    
+    with cols[0]:
+        st.metric("📊 Total Reclamos", total_reclamos, help="Reclamos históricos registrados")
+    with cols[1]:
+        st.metric("📅 Hoy", reclamos_hoy, help="Reclamos cargados hoy")
+    with cols[2]:
+        st.metric("⏳ Pendientes", pendientes, help="Reclamos pendientes de atención")
+    with cols[3]:
+        st.metric("⚙️ En Curso", en_curso, help="Reclamos siendo atendidos")
+    
+    st.markdown("---")
 
 # Navegación
 opcion = render_navigation()
