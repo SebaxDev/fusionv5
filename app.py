@@ -16,10 +16,35 @@ import io
 from streamlit_lottie import st_lottie
 import json
 
-# Función para cargar animaciones Lottie
+# Función para cargar animaciones Lottie con manejo de errores
 def load_lottie_file(filepath: str):
-    with open(filepath, "r") as f:
-        return json.load(f)
+    try:
+        with open(filepath, "r") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        # Animación básica de robot como fallback
+        return {
+            "v": "5.10.1",
+            "fr": 30,
+            "ip": 0,
+            "op": 90,
+            "w": 512,
+            "h": 512,
+            "nm": "Robot Animation",
+            "layers": [
+                {
+                    "ty": 4,
+                    "nm": "Robot",
+                    "ks": {
+                        "o": {"a": 0, "k": 100},
+                        "r": {"a": 1, "k": [{"i": {"x": [0.833], "y": [0.833]}, "o": {"x": [0.167], "y": [0.167]}, "t": 0, "s": [0]}, {"t": 90, "s": [360]}]},
+                        "p": {"a": 0, "k": [256, 256, 0]},
+                        "a": {"a": 0, "k": [0, 0, 0]},
+                        "s": {"a": 0, "k": [100, 100, 100]}
+                    }
+                }
+            ]
+        }
 
 # Imports de componentes
 from components.auth import has_permission, check_authentication, render_login, render_user_info
