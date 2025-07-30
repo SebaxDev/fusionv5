@@ -1678,8 +1678,14 @@ elif opcion == "Cierre de Reclamos" and has_permission('cierre_reclamos'):
     # Filtrar reclamos resueltos y asegurar que las fechas estén en zona horaria Argentina
     df_resueltos = df_reclamos[df_reclamos["Estado"] == "Resuelto"].copy()
     
-    # Convertir fechas a datetime con zona horaria Argentina
-    df_resueltos["Fecha y hora"] = pd.to_datetime(df_resueltos["Fecha y hora"]).dt.tz_localize(tz_argentina)
+    # Convertir fechas a datetime y asegurar zona horaria Argentina
+    df_resueltos["Fecha y hora"] = pd.to_datetime(df_resueltos["Fecha y hora"])
+    
+    # Aplicar zona horaria solo si no la tiene ya
+    if df_resueltos["Fecha y hora"].dt.tz is None:
+        df_resueltos["Fecha y hora"] = df_resueltos["Fecha y hora"].dt.tz_localize(tz_argentina)
+    else:
+        df_resueltos["Fecha y hora"] = df_resueltos["Fecha y hora"].dt.tz_convert(tz_argentina)
     
     # Calcular días desde resolución (usando datetime.now() con la misma zona horaria)
     df_resueltos["Dias_resuelto"] = (datetime.now(tz_argentina) - df_resueltos["Fecha y hora"]).dt.days
