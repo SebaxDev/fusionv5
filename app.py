@@ -28,11 +28,29 @@ from utils.date_utils import parse_fecha, es_fecha_valida, format_fecha, ahora_a
 # --------------------------------------------------
 # INICIALIZACIÓN GARANTIZADA
 # --------------------------------------------------
-if 'app_initialized' not in st.session_state:
-    init_api_session_state()  # Inicializa API
-    st.session_state.app_initialized = True  # Marcar app como inicializada
-    st.session_state.df_reclamos = pd.DataFrame()  # Dataframes iniciales
-    st.session_state.df_clientes = pd.DataFrame()
+class AppState:
+    def __init__(self):
+        self._init_state()
+        
+    def _init_state(self):
+        if 'app_initialized' not in st.session_state:
+            init_api_session_state()
+            st.session_state.update({
+                'app_initialized': True,
+                'df_reclamos': pd.DataFrame(),
+                'df_clientes': pd.DataFrame(),
+                'last_update': None
+            })
+    
+    def update_data(self, df_reclamos, df_clientes):
+        st.session_state.update({
+            'df_reclamos': df_reclamos,
+            'df_clientes': df_clientes,
+            'last_update': datetime.now()
+        })
+
+# Uso:
+app_state = AppState()
 # --------------------------
 # INICIALIZACIONES
 # --------------------------
@@ -90,38 +108,27 @@ st.markdown(get_main_styles(dark_mode=st.session_state.modo_oscuro), unsafe_allo
 # CONEXIÓN CON GOOGLE SHEETS
 # --------------------------
 
-@st.cache_resource
+@st.cache_resource(ttl=3600)  # Cache por 1 hora
 def init_google_sheets():
-    """Inicializa la conexión con Google Sheets con manejo de errores mejorado"""
-    try:
-        # Cargar credenciales de forma segura
-        if 'gcp_service_account' not in st.secrets:
-            raise ValueError("No se encontraron credenciales en st.secrets")
-            
-        info = dict(st.secrets["gcp_service_account"])
-        info["private_key"] = info["private_key"].replace("\\n", "\n")
-        
-        credentials = service_account.Credentials.from_service_account_info(
-            info,
-            scopes=["https://www.googleapis.com/auth/spreadsheets",
-                    "https://www.googleapis.com/auth/drive"]
+    """Conexión optimizada a Google Sheets con retry automático"""
+    @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(3))
+    def _connect():
+        creds = service_account.Credentials.from_service_account_info(
+            {**st.secrets["gcp_service_account"], "private_key": st.secrets["gcp_service_account"]["private_key"].replace("\\n", "\n")},
+            scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
         )
-        
-        client = gspread.authorize(credentials)
-        
-        # Validar existencia de las hojas
-        try:
-            sheet_reclamos = client.open_by_key(SHEET_ID).worksheet(WORKSHEET_RECLAMOS)
-            sheet_clientes = client.open_by_key(SHEET_ID).worksheet(WORKSHEET_CLIENTES)
-            sheet_usuarios = client.open_by_key(SHEET_ID).worksheet(WORKSHEET_USUARIOS)
-            return sheet_reclamos, sheet_clientes, sheet_usuarios
-        except gspread.WorksheetNotFound as e:
-            raise ValueError(f"Hoja no encontrada: {str(e)}")
-            
+        client = gspread.authorize(creds)
+        return (
+            client.open_by_key(SHEET_ID).worksheet(WORKSHEET_RECLAMOS),
+            client.open_by_key(SHEET_ID).worksheet(WORKSHEET_CLIENTES),
+            client.open_by_key(SHEET_ID).worksheet(WORKSHEET_USUARIOS)
+        )
+    
+    try:
+        return _connect()
     except Exception as e:
-        st.error(f"🔴 Error crítico al conectar con Google Sheets: {str(e)}")
+        st.error(f"🔴 Error de conexión: {str(e)}")
         st.stop()
-        return None, None, None
 
 # Inicializar conexión con Google Sheets
 with st.spinner("Conectando con Google Sheets..."):
