@@ -13,12 +13,37 @@ from tenacity import retry, wait_exponential, stop_after_attempt
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 import io
+from streamlit_lottie import st_lottie
+import json
+
+# Función para cargar animaciones Lottie
+def load_lottie_file(filepath: str):
+    with open(filepath, "r") as f:
+        return json.load(f)
 
 # Imports de componentes
 from components.auth import has_permission, check_authentication, render_login, render_user_info
 from components.navigation import render_navigation, render_user_info
 from components.metrics_dashboard import render_metrics_dashboard
 from utils.styles import get_main_styles
+
+# Estilos adicionales para el robot
+robot_styles = """
+<style>
+    .stLottie {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 100;
+        opacity: 0.9;
+        transition: all 0.3s ease;
+    }
+    .stLottie:hover {
+        opacity: 1;
+        transform: scale(1.05);
+    }
+</style>
+"""
 from utils.data_manager import safe_get_sheet_data, safe_normalize, update_sheet_data, batch_update_sheet
 from utils.api_manager import api_manager, init_api_session_state  # Import modificado
 from utils.pdf_utils import agregar_pie_pdf
@@ -55,6 +80,9 @@ app_state = AppState()
 # --------------------------
 # INICIALIZACIONES
 # --------------------------
+
+# Aplicar estilos del robot
+st.markdown(robot_styles, unsafe_allow_html=True)
 
 # Configuración de página
 st.set_page_config(
@@ -1535,6 +1563,20 @@ elif opcion == "Cierre de Reclamos" and user_role == 'admin':
     st.markdown('</div>', unsafe_allow_html=True)
 
 # --------------------------
+# Robot animado
+robot_animation = load_lottie_file("robot_animation.json")  # Asegúrate de tener este archivo en tu directorio
+with st.sidebar:
+    st_lottie(
+        robot_animation,
+        speed=1,
+        reverse=False,
+        loop=True,
+        quality="medium",
+        height=150,
+        width=150,
+        key="robot"
+    )
+
 # NUEVO FOOTER - RESUMEN DE LA JORNADA
 # --------------------------
 st.markdown("---")
