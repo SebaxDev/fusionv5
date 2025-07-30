@@ -429,29 +429,29 @@ else:
 # Dashboard simplificado para móviles
 if is_mobile():
     cols = st.columns(2)
-    total_reclamos = len(df_reclamos)
     reclamos_hoy = len(df_reclamos[df_reclamos["Fecha y hora"].dt.date == datetime.now().date()])
+    desconexiones = len(df_reclamos[df_reclamos["Tipo de reclamo"].str.strip().str.lower() == "desconexion a pedido"])
     
     with cols[0]:
         st.metric("📅 Hoy", reclamos_hoy)
     with cols[1]:
-        st.metric("⚙️ En Curso", len(df_reclamos[df_reclamos["Estado"] == "En curso"]))
+        st.metric("🔌 Desconexiones", desconexiones)
 else:
     with st.container():
         cols = st.columns(4)
-        total_reclamos = len(df_reclamos)
         reclamos_hoy = len(df_reclamos[df_reclamos["Fecha y hora"].dt.date == datetime.now().date()])
         pendientes = len(df_reclamos[df_reclamos["Estado"] == "Pendiente"])
         en_curso = len(df_reclamos[df_reclamos["Estado"] == "En curso"])
+        desconexiones = len(df_reclamos[df_reclamos["Tipo de reclamo"].str.strip().str.lower() == "desconexion a pedido"])
         
         with cols[0]:
-            st.metric("📊 Total Reclamos", total_reclamos, help="Reclamos históricos registrados")
-        with cols[1]:
             st.metric("📅 Hoy", reclamos_hoy, help="Reclamos cargados hoy")
-        with cols[2]:
+        with cols[1]:
             st.metric("⏳ Pendientes", pendientes, help="Reclamos pendientes de atención")
-        with cols[3]:
+        with cols[2]:
             st.metric("⚙️ En Curso", en_curso, help="Reclamos siendo atendidos")
+        with cols[3]:
+            st.metric("🔌 Desconexiones", desconexiones, help="Desconexiones a pedido")
         
         st.markdown("---")
 
