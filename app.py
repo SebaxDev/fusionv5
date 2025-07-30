@@ -16,35 +16,6 @@ import io
 from streamlit_lottie import st_lottie
 import json
 
-# Función para cargar animaciones Lottie con manejo de errores
-def load_lottie_file(filepath: str):
-    try:
-        with open(filepath, "r") as f:
-            return json.load(f)
-    except FileNotFoundError:
-        # Animación básica de robot como fallback
-        return {
-            "v": "5.10.1",
-            "fr": 30,
-            "ip": 0,
-            "op": 90,
-            "w": 512,
-            "h": 512,
-            "nm": "Robot Animation",
-            "layers": [
-                {
-                    "ty": 4,
-                    "nm": "Robot",
-                    "ks": {
-                        "o": {"a": 0, "k": 100},
-                        "r": {"a": 1, "k": [{"i": {"x": [0.833], "y": [0.833]}, "o": {"x": [0.167], "y": [0.167]}, "t": 0, "s": [0]}, {"t": 90, "s": [360]}]},
-                        "p": {"a": 0, "k": [256, 256, 0]},
-                        "a": {"a": 0, "k": [0, 0, 0]},
-                        "s": {"a": 0, "k": [100, 100, 100]}
-                    }
-                }
-            ]
-        }
 
 # Imports de componentes
 from components.auth import has_permission, check_authentication, render_login, render_user_info
@@ -52,23 +23,6 @@ from components.navigation import render_navigation, render_user_info
 from components.metrics_dashboard import render_metrics_dashboard
 from utils.styles import get_main_styles
 
-# Estilos adicionales para el robot
-robot_styles = """
-<style>
-    .stLottie {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        z-index: 100;
-        opacity: 0.9;
-        transition: all 0.3s ease;
-    }
-    .stLottie:hover {
-        opacity: 1;
-        transform: scale(1.05);
-    }
-</style>
-"""
 from utils.data_manager import safe_get_sheet_data, safe_normalize, update_sheet_data, batch_update_sheet
 from utils.api_manager import api_manager, init_api_session_state  # Import modificado
 from utils.pdf_utils import agregar_pie_pdf
@@ -105,9 +59,6 @@ app_state = AppState()
 # --------------------------
 # INICIALIZACIONES
 # --------------------------
-
-# Aplicar estilos del robot
-st.markdown(robot_styles, unsafe_allow_html=True)
 
 # Configuración de página
 st.set_page_config(
@@ -1588,19 +1539,6 @@ elif opcion == "Cierre de Reclamos" and user_role == 'admin':
     st.markdown('</div>', unsafe_allow_html=True)
 
 # --------------------------
-# Robot animado
-robot_animation = load_lottie_file("robot_animation.json")  # Asegúrate de tener este archivo en tu directorio
-with st.sidebar:
-    st_lottie(
-        robot_animation,
-        speed=1,
-        reverse=False,
-        loop=True,
-        quality="medium",
-        height=150,
-        width=150,
-        key="robot"
-    )
 
 # NUEVO FOOTER - RESUMEN DE LA JORNADA
 # --------------------------
