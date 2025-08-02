@@ -17,13 +17,12 @@ WORKSHEET_USUARIOS = "usuarios"
 COLUMNAS_RECLAMOS = [
     "Fecha y hora", "Nº Cliente", "Sector", "Nombre", 
     "Dirección", "Teléfono", "Tipo de reclamo", 
-    "Detalles", "Estado", "Técnico", "N° de Precinto", "Atendido por",
-    COLUMNA_ID_RECLAMO  # Agregado al final como en tu hoja
+    "Detalles", "Estado", "Técnico", "N° de Precinto", "Atendido por", "ID Reclamo"
 ]
 
 COLUMNAS_CLIENTES = [
     "Nº Cliente", "Sector", "Nombre", "Dirección", 
-    "Teléfono", "N° de Precinto", COLUMNA_ID_CLIENTE  # Manteniendo el orden de tu hoja
+    "Teléfono", "N° de Precinto", "ID Cliente", "Última Modificación"
 ]
 
 COLUMNAS_USUARIOS = [  # Nueva estructura para usuarios
