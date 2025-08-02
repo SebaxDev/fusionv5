@@ -479,24 +479,20 @@ if opcion == "Inicio" and has_permission('inicio'):
     formulario_bloqueado = False
     reclamo_guardado = False
     cliente_nuevo = False
+    actualizar_datos_cliente = False
 
     if "Nº Cliente" in df_clientes.columns and nro_cliente:
-        # Normalización de datos
         df_clientes["Nº Cliente"] = df_clientes["Nº Cliente"].astype(str).str.strip()
         df_reclamos["Nº Cliente"] = df_reclamos["Nº Cliente"].astype(str).str.strip()
 
         match = df_clientes[df_clientes["Nº Cliente"] == nro_cliente]
-
-        # Procesamiento robusto de fechas usando la función centralizada
         df_reclamos["Fecha y hora"] = df_reclamos["Fecha y hora"].apply(parse_fecha)
 
         reclamos_activos = df_reclamos[
             (df_reclamos["Nº Cliente"] == nro_cliente) &
             (
-                df_reclamos["Estado"].isin(["Pendiente", "En curso"]) |
-                (
-                    df_reclamos["Tipo de reclamo"].str.strip().str.lower() == "desconexion a pedido"
-                )
+                df_reclamos["Estado"].str.strip().str.lower().isin(["pendiente", "en curso"]) |
+                (df_reclamos["Tipo de reclamo"].str.strip().str.lower() == "desconexion a pedido")
             )
         ]
 
@@ -507,21 +503,17 @@ if opcion == "Inicio" and has_permission('inicio'):
             st.info("ℹ️ Cliente no encontrado. Se cargará como Cliente Nuevo.")
 
         if not reclamos_activos.empty:
-            st.error("⚠️ Este cliente ya tiene un reclamo sin resolver o una desconexión activa. No se puede cargar uno nuevo.")
             formulario_bloqueado = True
+            st.error("⚠️ Este cliente ya tiene un reclamo sin resolver o una desconexión activa. No se puede cargar uno nuevo.")
 
-            reclamo_vigente = reclamos_activos.sort_values("Fecha y hora", ascending=False).iloc[0]
-
-            with st.expander("🔍 Ver detalles del reclamo activo"):
-                # Usar la función format_fecha para mostrar consistencia
-                fecha_formateada = format_fecha(reclamo_vigente['Fecha y hora'], '%d/%m/%Y %H:%M')
-                st.markdown(f"**📅 Fecha del reclamo:** {fecha_formateada}")
-                st.markdown(f"**👤 Cliente:** {reclamo_vigente['Nombre']}")
-                st.markdown(f"**📌 Tipo de reclamo:** {reclamo_vigente['Tipo de reclamo']}")
-                st.markdown(f"**📝 Detalles:** {reclamo_vigente['Detalles'][:250]}{'...' if len(reclamo_vigente['Detalles']) > 250 else ''}")
-                st.markdown(f"**⚙️ Estado:** {reclamo_vigente['Estado'] or 'Sin estado'}")
-                st.markdown(f"**👷 Técnico asignado:** {reclamo_vigente.get('Técnico', 'No asignado') or 'No asignado'}")
-                st.markdown(f"**🙍‍♂️ Atendido por:** {reclamo_vigente.get('Atendido por', 'N/A')}")
+            for _, reclamo in reclamos_activos.iterrows():
+                with st.expander(f"🔍 Ver reclamo activo - {format_fecha(reclamo['Fecha y hora'], '%d/%m/%Y %H:%M')}"):
+                    st.markdown(f"**👤 Cliente:** {reclamo['Nombre']}")
+                    st.markdown(f"**📌 Tipo de reclamo:** {reclamo['Tipo de reclamo']}")
+                    st.markdown(f"**📝 Detalles:** {reclamo['Detalles'][:250]}{'...' if len(reclamo['Detalles']) > 250 else ''}")
+                    st.markdown(f"**⚙️ Estado:** {reclamo['Estado'] or 'Sin estado'}")
+                    st.markdown(f"**👷 Técnico asignado:** {reclamo.get('Técnico', 'No asignado') or 'No asignado'}")
+                    st.markdown(f"**🙍‍♂️ Atendido por:** {reclamo.get('Atendido por', 'N/A')}")
 
     if not formulario_bloqueado:
         with st.form("reclamo_formulario", clear_on_submit=True):
@@ -556,32 +548,44 @@ if opcion == "Inicio" and has_permission('inicio'):
             enviado = st.form_submit_button("✅ Guardar Reclamo", use_container_width=True)
 
         if enviado:
+            campos_obligatorios = {
+                "Nombre": nombre.strip(),
+                "Dirección": direccion.strip(),
+                "Sector": sector.strip(),
+                "Tipo de reclamo": tipo_reclamo.strip(),
+                "Atendido por": atendido_por.strip()
+            }
+            campos_vacios = [campo for campo, valor in campos_obligatorios.items() if not valor]
+
             if not nro_cliente:
                 st.error("⚠️ Debes ingresar un número de cliente.")
-            elif not all([nombre.strip(), direccion.strip(), sector.strip(), tipo_reclamo.strip(), atendido_por.strip()]):
-                st.error("⚠️ Todos los campos obligatorios deben estar completos.")
+            elif campos_vacios:
+                st.error(f"⚠️ Los siguientes campos están vacíos: {', '.join(campos_vacios)}.")
             else:
                 with st.spinner("Guardando reclamo..."):
                     try:
-                        # Usar la función centralizada para obtener fecha/hora actual
                         fecha_hora_obj = ahora_argentina()
-                        fecha_hora_str = format_fecha(fecha_hora_obj)  # Formato consistente dd/mm/yyyy HH:MM
-                        
+                        fecha_hora_str = format_fecha(fecha_hora_obj)
                         estado_reclamo = "" if tipo_reclamo.strip().lower() == "desconexion a pedido" else "Pendiente"
+                        id_reclamo = str(uuid.uuid4())
 
                         fila_reclamo = [
-                            fecha_hora_str,  # String formateado usando la función centralizada
-                            nro_cliente, 
-                            sector, 
+                            fecha_hora_str,
+                            nro_cliente,
+                            sector,
                             nombre.upper(),
-                            direccion.upper(), 
-                            telefono, 
+                            direccion.upper(),
+                            telefono,
                             tipo_reclamo,
-                            detalles.upper(), 
-                            estado_reclamo, 
-                            "",  # Técnico (vacío inicialmente)
-                            precinto, 
-                            atendido_por.upper()
+                            detalles.upper(),
+                            estado_reclamo,
+                            "",
+                            precinto,
+                            atendido_por.upper(),
+                            "",
+                            "",
+                            "",
+                            id_reclamo
                         ]
 
                         success, error = api_manager.safe_sheet_operation(
@@ -596,19 +600,34 @@ if opcion == "Inicio" and has_permission('inicio'):
                             if tipo_reclamo.strip().lower() == "desconexion a pedido":
                                 st.warning("📄 Este reclamo es una Desconexión a Pedido. **Y NO CUENTA como reclamo activo.**")
 
-                            if nro_cliente not in df_clientes["Nº Cliente"].values:
+                            cliente_row_idx = df_clientes[df_clientes["Nº Cliente"] == nro_cliente].index
+
+                            if cliente_row_idx.empty:
                                 fila_cliente = [nro_cliente, sector, nombre.upper(), direccion.upper(), telefono, precinto]
-                                success_cliente, _ = api_manager.safe_sheet_operation(
-                                    sheet_clientes.append_row,
-                                    fila_cliente
-                                )
+                                success_cliente, _ = api_manager.safe_sheet_operation(sheet_clientes.append_row, fila_cliente)
                                 if success_cliente:
                                     cliente_nuevo = True
                                     st.info("ℹ️ Se ha creado un nuevo registro de cliente.")
+                            else:
+                                idx = cliente_row_idx[0] + 2
+                                updates_cliente = []
+                                if str(df_clientes.at[cliente_row_idx[0], "Nombre"]).strip().upper() != nombre.strip().upper():
+                                    updates_cliente.append({"range": f"C{idx}", "values": [[nombre.upper()]]})
+                                if str(df_clientes.at[cliente_row_idx[0], "Dirección"]).strip().upper() != direccion.strip().upper():
+                                    updates_cliente.append({"range": f"D{idx}", "values": [[direccion.upper()]]})
+                                if str(df_clientes.at[cliente_row_idx[0], "Teléfono"]).strip() != telefono.strip():
+                                    updates_cliente.append({"range": f"E{idx}", "values": [[telefono.strip()]]})
+                                if str(df_clientes.at[cliente_row_idx[0], "Sector"]).strip() != sector.strip():
+                                    updates_cliente.append({"range": f"B{idx}", "values": [[sector.strip()]]})
+                                if str(df_clientes.at[cliente_row_idx[0], "N° de Precinto"]).strip() != precinto.strip():
+                                    updates_cliente.append({"range": f"F{idx}", "values": [[precinto.strip()]]})
+                                if updates_cliente:
+                                    success_update, _ = api_manager.safe_sheet_operation(batch_update_sheet, sheet_clientes, updates_cliente, is_batch=True)
+                                    if success_update:
+                                        st.info("🔁 Datos del cliente actualizados.")
 
-                            # Limpiar caché y recargar datos
                             st.cache_data.clear()
-                            time.sleep(3)  # Reducido de 4 a 3 segundos
+                            time.sleep(3)
                             st.rerun()
                         else:
                             st.error(f"❌ Error al guardar: {error}")
@@ -634,8 +653,9 @@ elif opcion == "Reclamos cargados" and has_permission('reclamos_cargados'):
 
         df_clientes["Nº Cliente"] = df_clientes["Nº Cliente"].astype(str).str.strip()
         df["Nº Cliente"] = df["Nº Cliente"].astype(str).str.strip()
+        df["ID Reclamo"] = df["ID Reclamo"].astype(str).str.strip()
 
-        df = pd.merge(df, df_clientes[["Nº Cliente", "N° de Precinto", "Teléfono"]], 
+        df = pd.merge(df, df_clientes[["Nº Cliente", "N° de Precinto", "Teléfono"]],
                       on="Nº Cliente", how="left", suffixes=("", "_cliente"))
 
         df["Fecha y hora"] = df["Fecha y hora"].apply(parse_fecha)
@@ -643,272 +663,142 @@ elif opcion == "Reclamos cargados" and has_permission('reclamos_cargados'):
 
         if df["Fecha y hora"].isna().any():
             num_fechas_invalidas = df["Fecha y hora"].isna().sum()
-            st.warning(f"⚠️ Advertencia: {num_fechas_invalidas} reclamos tienen fechas inválidas o faltantes")
-            if DEBUG_MODE:
-                invalid_data = df[df["Fecha y hora"].isna()].copy()
-                st.write("Reclamos con fechas inválidas:", invalid_data[['Nº Cliente', 'Nombre', 'Tipo de reclamo']])
+            st.warning(f"⚠️ {num_fechas_invalidas} reclamos tienen fechas inválidas o faltantes")
 
         df = df.sort_values("Fecha y hora", ascending=False)
 
+        # === Detectar múltiples reclamos activos por cliente ===
         df_activos = df[df["Estado"].isin(["Pendiente", "En curso"])]
+        duplicados = df_activos.duplicated(subset="Nº Cliente", keep=False)
+        df_activos["Duplicado"] = duplicados
+
+        # === Estadísticas visuales ===
         if not df_activos.empty:
             conteo_por_tipo = df_activos["Tipo de reclamo"].value_counts().sort_index()
             st.markdown("#### 📊 Distribución de reclamos activos por tipo")
-            st.markdown('<div style="margin-top: -10px; margin-bottom: 10px;">', unsafe_allow_html=True)
-
-            tipos = list(conteo_por_tipo.index)
-            cantidad = list(conteo_por_tipo.values)
-            cols_per_row = 4
-            for i in range(0, len(tipos), cols_per_row):
-                cols = st.columns(cols_per_row)
+            tipos, cantidad = list(conteo_por_tipo.index), list(conteo_por_tipo.values)
+            for i in range(0, len(tipos), 4):
+                cols = st.columns(4)
                 for j, col in enumerate(cols):
                     if i + j < len(tipos):
-                        tipo = tipos[i + j]
-                        cant = cantidad[i + j]
-                        color_cantidad = "#dc3545" if cant > 10 else "#0d6efd"
-                        font_size = "1.4rem" if cant > 10 else "1.2rem"
-                        with col:
-                            st.markdown(f"""
-                                <div style="text-align: center; padding: 5px; border-radius: 8px; background-color: #f8f9fa;">
-                                    <h5 style='margin: 0; font-size: 0.70rem; color: #6c757d;'>{tipo}</h5>
-                                    <h4 style='margin: 2px 0 0 0; color: {color_cantidad}; font-size: {font_size};'>{cant}</h4>
-                                </div>""", unsafe_allow_html=True)
-            st.markdown("</div>", unsafe_allow_html=True)
+                        tipo, cant = tipos[i + j], cantidad[i + j]
+                        color = "#dc3545" if cant > 10 else "#0d6efd"
+                        col.markdown(f"""
+                        <div style='text-align:center;background:#f8f9fa;padding:5px;border-radius:8px;'>
+                            <h5 style='margin:0;color:#6c757d;font-size:0.7rem'>{tipo}</h5>
+                            <h4 style='margin:0;color:{color};font-size:1.2rem'>{cant}</h4>
+                        </div>""", unsafe_allow_html=True)
 
+        # === Filtros ===
         st.markdown("#### 🔍 Filtros de búsqueda")
         col1, col2, col3 = st.columns(3)
-        with col1:
-            filtro_estado = st.selectbox("Estado", ["Todos"] + sorted(df["Estado"].dropna().unique()))
-        with col2:
-            filtro_sector = st.selectbox("Sector", ["Todos"] + sorted(df["Sector"].dropna().unique()))
-        with col3:
-            filtro_tipo = st.selectbox("Tipo de reclamo", ["Todos"] + sorted(df["Tipo de reclamo"].dropna().unique()))
+        estado = col1.selectbox("Estado", ["Todos"] + sorted(df["Estado"].dropna().unique()))
+        sector = col2.selectbox("Sector", ["Todos"] + sorted(df["Sector"].dropna().unique()))
+        tipo = col3.selectbox("Tipo de reclamo", ["Todos"] + sorted(df["Tipo de reclamo"].dropna().unique()))
 
         df_filtrado = df.copy()
-        if filtro_estado != "Todos":
-            df_filtrado = df_filtrado[df_filtrado["Estado"] == filtro_estado]
-        if filtro_sector != "Todos":
-            df_filtrado = df_filtrado[df_filtrado["Sector"] == filtro_sector]
-        if filtro_tipo != "Todos":
-            df_filtrado = df_filtrado[df_filtrado["Tipo de reclamo"] == filtro_tipo]
+        if estado != "Todos": df_filtrado = df_filtrado[df_filtrado["Estado"] == estado]
+        if sector != "Todos": df_filtrado = df_filtrado[df_filtrado["Sector"] == sector]
+        if tipo != "Todos": df_filtrado = df_filtrado[df_filtrado["Tipo de reclamo"] == tipo]
 
         st.markdown(f"**Mostrando {len(df_filtrado)} reclamos**")
 
-        columnas_visibles = ["Fecha_formateada", "Nº Cliente", "Nombre", "Sector", "Tipo de reclamo", "Teléfono", "Estado"]
-        df_mostrar = df_filtrado[columnas_visibles].copy()
-        df_mostrar = df_mostrar.rename(columns={"Fecha_formateada": "Fecha y hora"})
-
-        # Mostrar la tabla como texto (no como DatetimeColumn)
+        columnas = ["Fecha_formateada", "Nº Cliente", "Nombre", "Sector", "Tipo de reclamo", "Teléfono", "Estado"]
+        df_mostrar = df_filtrado[columnas].copy().rename(columns={"Fecha_formateada": "Fecha y hora"})
         st.dataframe(df_mostrar, use_container_width=True, hide_index=True)
 
-        # === FORMULARIO DE EDICIÓN MANUAL ===
+        # === Edición ===
         st.markdown("---")
         st.markdown("### ✏️ Editar un reclamo puntual")
+        df_filtrado["selector"] = df_filtrado["ID Reclamo"] + " - " + df_filtrado["Nombre"]
+        seleccion = st.selectbox("Seleccioná un reclamo por ID y nombre", [""] + df_filtrado["selector"].tolist())
 
-        df_filtrado["label_selector"] = df_filtrado["Nº Cliente"] + " - " + df_filtrado["Nombre"]
-        selector = st.selectbox(
-            "Seleccioná un reclamo por Nº de Cliente y Nombre",
-            [""] + df_filtrado["label_selector"].tolist()
-        )
+        if seleccion:
+            reclamo_id = seleccion.split(" - ")[0]
+            reclamo_actual = df[df["ID Reclamo"] == reclamo_id].iloc[0]
 
-        if selector:
-            nro_cliente = selector.split(" - ")[0]
-            reclamo_actual = df[df["Nº Cliente"] == nro_cliente].iloc[0]
-            
-            # Mostrar estado actual
-            estado_actual = reclamo_actual.get("Estado", "")
-            st.markdown(f"**Estado actual:** {estado_actual}")
-            
-            # Mostrar fecha formateada usando la función centralizada
-            fecha_formateada = format_fecha(reclamo_actual.get("Fecha y hora"))
-            st.markdown(f"**Fecha del reclamo:** {fecha_formateada}")
-            
-            nueva_direccion = st.text_input("Dirección", value=reclamo_actual.get("Dirección", ""))
-            nuevo_telefono = st.text_input("Teléfono", value=reclamo_actual.get("Teléfono", ""))
-            nuevo_tipo = st.selectbox("Tipo de reclamo", sorted(df["Tipo de reclamo"].unique()), 
-                                      index=sorted(df["Tipo de reclamo"].unique()).index(reclamo_actual["Tipo de reclamo"]))
-            nuevos_detalles = st.text_area("Detalles del reclamo", value=reclamo_actual.get("Detalles", ""), height=100)
-            nuevo_precinto = st.text_input("N° de Precinto", value=reclamo_actual.get("N° de Precinto", ""))
-            
-            # Nuevo campo para cambiar estado
-            nuevo_estado = st.selectbox(
-                "Estado del reclamo",
-                ["Pendiente", "En curso", "Resuelto"],
-                index=["Pendiente", "En curso", "Resuelto"].index(estado_actual) if estado_actual in ["Pendiente", "En curso", "Resuelto"] else 0
-            )
-            
+            st.markdown(f"**Estado actual:** {reclamo_actual['Estado']}")
+            st.markdown(f"**Fecha:** {format_fecha(reclamo_actual.get('Fecha y hora'))}")
+
+            direccion = st.text_input("Dirección", value=reclamo_actual.get("Dirección", ""))
+            telefono = st.text_input("Teléfono", value=reclamo_actual.get("Teléfono", ""))
+            tipo_reclamo = st.selectbox("Tipo de reclamo", sorted(df["Tipo de reclamo"].unique()),
+                index=sorted(df["Tipo de reclamo"].unique()).index(reclamo_actual["Tipo de reclamo"]))
+            detalles = st.text_area("Detalles", value=reclamo_actual.get("Detalles", ""), height=100)
+            precinto = st.text_input("N° de Precinto", value=reclamo_actual.get("N° de Precinto", ""))
+
+            estado_nuevo = st.selectbox("Nuevo estado", ["Pendiente", "En curso", "Resuelto"],
+                index=["Pendiente", "En curso", "Resuelto"].index(reclamo_actual["Estado"]) if reclamo_actual["Estado"] in ["Pendiente", "En curso", "Resuelto"] else 0)
+
             col1, col2 = st.columns(2)
-            
-            with col1:
-                if st.button("💾 Guardar cambios", key="guardar_reclamo_individual", use_container_width=True):
-                    with st.spinner("Guardando cambios..."):
-                        try:
-                            idx_original = df[df["Nº Cliente"] == nro_cliente].index[0]
-                            
-                            updates = {
-                                "Dirección": nueva_direccion,
-                                "Teléfono": nuevo_telefono,
-                                "Tipo de reclamo": nuevo_tipo,
-                                "Detalles": nuevos_detalles,
-                                "N° de Precinto": nuevo_precinto,
-                                "Estado": nuevo_estado
-                            }
-                            
-                            # Si vuelve a pendiente, limpiar técnico
-                            if nuevo_estado == "Pendiente":
-                                updates["Técnico"] = ""
-                            
-                            # Actualizar el dataframe local
-                            for col, val in updates.items():
-                                df.loc[idx_original, col] = val
-                            
-                            # Preparar datos para actualizar en Google Sheets
-                            df_para_guardar = df.copy()
-                            df_para_guardar["Fecha y hora"] = df_para_guardar["Fecha y hora"].apply(
-                                lambda x: format_fecha(x) if pd.notna(x) else ""
-                            )
-                            data_to_update = [df_para_guardar.columns.tolist()] + df_para_guardar.astype(str).values.tolist()
-                            
-                            success, error = api_manager.safe_sheet_operation(
-                                sheet_reclamos.update,
-                                data_to_update,
-                                is_batch=True
-                            )
-                            
-                            if success:
-                                st.success("✅ Reclamo actualizado correctamente.")
-                                st.cache_data.clear()
-                                time.sleep(3)  # Reducido de 4 a 3 segundos
-                                st.rerun()
-                            else:
-                                st.error(f"❌ Error al guardar: {error}")
-                                if DEBUG_MODE:
-                                    st.write("Detalles del error:", error)
-                        except Exception as e:
-                            st.error(f"❌ Error al procesar: {str(e)}")
-                            if DEBUG_MODE:
-                                st.exception(e)
-            
-            with col2:
-                if st.button("🔄 Cambiar solo estado", key="cambiar_estado", use_container_width=True):
-                    with st.spinner("Actualizando estado..."):
-                        try:
-                            idx_original = df[df["Nº Cliente"] == nro_cliente].index[0]
-                            
-                            # Actualizar solo el estado
-                            df.loc[idx_original, "Estado"] = nuevo_estado
-                            
-                            # Si vuelve a pendiente, limpiar técnico
-                            if nuevo_estado == "Pendiente":
-                                df.loc[idx_original, "Técnico"] = ""
-                            
-                            # Actualizar en Google Sheets
-                            df_para_guardar = df.copy()
-                            df_para_guardar["Fecha y hora"] = df_para_guardar["Fecha y hora"].apply(
-                                lambda x: format_fecha(x) if pd.notna(x) else ""
-                            )
-                            data_to_update = [df_para_guardar.columns.tolist()] + df_para_guardar.astype(str).values.tolist()
-                            
-                            success, error = api_manager.safe_sheet_operation(
-                                sheet_reclamos.update,
-                                data_to_update,
-                                is_batch=True
-                            )
-                            
-                            if success:
-                                st.success(f"✅ Estado cambiado a {nuevo_estado}.")
-                                st.cache_data.clear()
-                                time.sleep(3)  # Reducido de 4 a 3 segundos
-                                st.rerun()
-                            else:
-                                st.error(f"❌ Error al cambiar estado: {error}")
-                                if DEBUG_MODE:
-                                    st.write("Detalles del error:", error)
-                        except Exception as e:
-                            st.error(f"❌ Error al procesar: {str(e)}")
-                            if DEBUG_MODE:
-                                st.exception(e)
 
-        # === DESCONEXIONES A PEDIDO ===
+            if col1.button("💾 Guardar cambios", use_container_width=True):
+                if not direccion.strip() or not detalles.strip():
+                    st.warning("⚠️ Dirección y detalles no pueden estar vacíos.")
+                else:
+                    with st.spinner("Actualizando reclamo..."):
+                        fila = df[df["ID Reclamo"] == reclamo_id].index[0] + 2
+                        updates = [
+                            {"range": f"D{fila}", "values": [[direccion]]},
+                            {"range": f"E{fila}", "values": [[telefono]]},
+                            {"range": f"G{fila}", "values": [[tipo_reclamo]]},
+                            {"range": f"H{fila}", "values": [[detalles]]},
+                            {"range": f"I{fila}", "values": [[estado_nuevo]]},
+                            {"range": f"K{fila}", "values": [[precinto]]},
+                        ]
+                        if estado_nuevo == "Pendiente":
+                            updates.append({"range": f"J{fila}", "values": [[""]]})
+
+                        success, error = api_manager.safe_sheet_operation(batch_update_sheet, sheet_reclamos, updates, is_batch=True)
+                        if success:
+                            st.success("✅ Reclamo actualizado.")
+                            st.cache_data.clear()
+                            time.sleep(3)
+                            st.rerun()
+                        else:
+                            st.error(f"❌ Error: {error}")
+
+            if col2.button("🔄 Cambiar solo estado", use_container_width=True):
+                with st.spinner("Actualizando estado..."):
+                    fila = df[df["ID Reclamo"] == reclamo_id].index[0] + 2
+                    updates = [
+                        {"range": f"I{fila}", "values": [[estado_nuevo]]}
+                    ]
+                    if estado_nuevo == "Pendiente":
+                        updates.append({"range": f"J{fila}", "values": [[""]]})
+                    success, error = api_manager.safe_sheet_operation(batch_update_sheet, sheet_reclamos, updates, is_batch=True)
+                    if success:
+                        st.success(f"☑️ Estado cambiado a {estado_nuevo}.")
+                        st.cache_data.clear()
+                        time.sleep(3)
+                        st.rerun()
+                    else:
+                        st.error(f"❌ Error: {error}")
+
+        # === Desconexiones a pedido ===
         st.markdown("---")
         st.markdown("### 🔌 Gestión de Desconexiones a Pedido")
 
         desconexiones = df[
             (df["Tipo de reclamo"].str.strip().str.lower() == "desconexion a pedido") &
             ((df["Estado"].isna()) | (df["Estado"] == ""))
-        ].copy()
+        ]
 
-        cantidad = len(desconexiones)
-        st.info(f"📄 Hay {cantidad} desconexiones a pedido sin estado cargadas.")
+        st.info(f"📄 {len(desconexiones)} desconexiones sin estado cargadas")
 
-        if cantidad > 0:
-            if st.button("📄 Generar PDF de desconexiones pendientes"):
-                buffer = io.BytesIO()
-                c = canvas.Canvas(buffer, pagesize=A4)
-                width, height = A4
-                y = height - 40
-
-                c.setFont("Helvetica-Bold", 16)
-                c.drawString(40, y, f"DESCONEXIONES A PEDIDO - {format_fecha(ahora_argentina(), '%d/%m/%Y')}")
-                y -= 30
-
-                for i, reclamo in desconexiones.iterrows():
-                    c.setFont("Helvetica-Bold", 14)
-                    c.drawString(40, y, f"{reclamo['Nº Cliente']} - {reclamo['Nombre']}")
-                    y -= 15
-                    c.setFont("Helvetica", 12)
-                    
-                    # Formatear fecha para PDF usando la función centralizada
-                    fecha_pdf = format_fecha(reclamo.get("Fecha y hora"), '%d/%m/%Y %H:%M')
-                    
-                    lineas = [
-                        f"Fecha: {fecha_pdf}",
-                        f"Dirección: {reclamo['Dirección']} - Tel: {reclamo['Teléfono']}",
-                        f"Sector: {reclamo['Sector']} - Precinto: {reclamo.get('N° de Precinto', 'N/A')}",
-                        f"Detalles: {reclamo['Detalles'][:100]}..." if reclamo['Detalles'] and len(reclamo['Detalles']) > 100 else f"Detalles: {reclamo['Detalles']}"
-                    ]
-                    for linea in lineas:
-                        c.drawString(40, y, linea)
-                        y -= 12
-                    y -= 8
-                    c.line(40, y, width - 40, y)
-                    y -= 15
-                    if y < 100:
-                        agregar_pie_pdf(c, width, height)
-                        c.showPage()
-                        y = height - 40
-
-                agregar_pie_pdf(c, width, height)
-                c.save()
-                buffer.seek(0)
-                st.download_button("📥 Descargar PDF de desconexiones", buffer, file_name="desconexiones_pedido.pdf", mime="application/pdf")
-
-            st.markdown("#### ✅ Marcar como resueltas")
-            for i, row in desconexiones.iterrows():
-                col1, col2 = st.columns([5, 1])
-                fecha_formateada = format_fecha(row.get("Fecha y hora"))
-                col1.markdown(f"**{row['Nº Cliente']} - {row['Nombre']} - {fecha_formateada} - Sector {row['Sector']}**")
-                if col2.button("Resuelto", key=f"resuelto_{i}"):
-                    try:
-                        fila = i + 2
-                        success, error = api_manager.safe_sheet_operation(
-                            sheet_reclamos.update,
-                            f"I{fila}",
-                            [["Resuelto"]]
-                        )
-                        if success:
-                            st.success(f"☑️ Reclamo {row['Nº Cliente']} marcado como resuelto.")
-                            st.cache_data.clear()
-                            time.sleep(3)  # Reducido de 4 a 3 segundos
-                            st.rerun()
-                        else:
-                            st.error(f"❌ Error al actualizar: {error}")
-                            if DEBUG_MODE:
-                                st.write("Detalles del error:", error)
-                    except Exception as e:
-                        st.error(f"❌ Error inesperado: {str(e)}")
-                        if DEBUG_MODE:
-                            st.exception(e)
+        for i, row in desconexiones.iterrows():
+            col1, col2 = st.columns([5, 1])
+            col1.markdown(f"**{row['Nº Cliente']} - {row['Nombre']} - {format_fecha(row['Fecha y hora'])} - Sector {row['Sector']}**")
+            if col2.button("Resuelto", key=f"resuelto_{i}"):
+                fila = i + 2
+                success, error = api_manager.safe_sheet_operation(sheet_reclamos.update, f"I{fila}", [["Resuelto"]])
+                if success:
+                    st.success("✅ Marcado como resuelto.")
+                    st.cache_data.clear()
+                    time.sleep(3)
+                    st.rerun()
+                else:
+                    st.error(f"❌ Error al actualizar: {error}")
 
     except Exception as e:
         st.error(f"⚠️ Error en la gestión de reclamos: {str(e)}")
@@ -916,9 +806,9 @@ elif opcion == "Reclamos cargados" and has_permission('reclamos_cargados'):
             st.exception(e)
 
     st.markdown('</div>', unsafe_allow_html=True)
-    
+
 # --------------------------
-# SECCIÓN 3: GESTION DE CLIENTES
+# SECCIÓN 3: GESTIÓN DE CLIENTES
 # --------------------------
 
 elif opcion == "Gestión de clientes" and has_permission('gestion_clientes'):
@@ -930,7 +820,6 @@ elif opcion == "Gestión de clientes" and has_permission('gestion_clientes'):
     if user_role == 'admin':
         st.markdown("### ✏️ Editar datos de un cliente")
 
-        # Generar lista de opciones para el selectbox
         df_clientes["label"] = df_clientes.apply(
             lambda row: f"{row['Nº Cliente']} - {row['Nombre']} - Sector {row.get('Sector', '')}",
             axis=1
@@ -962,19 +851,40 @@ elif opcion == "Gestión de clientes" and has_permission('gestion_clientes'):
                         help="Número de precinto del medidor"
                     )
 
+                    st.text_input("🆔 ID Cliente", value=cliente_actual.get("ID Cliente", "N/A"), disabled=True)
+
+                    # Mostrar últimos 3 reclamos
+                    df_reclamos_cliente = df_reclamos[df_reclamos["Nº Cliente"] == nro_cliente].copy()
+                    df_reclamos_cliente["Fecha y hora"] = df_reclamos_cliente["Fecha y hora"].apply(parse_fecha)
+                    df_reclamos_cliente = df_reclamos_cliente.sort_values("Fecha y hora", ascending=False).head(3)
+                    with st.expander("📄 Últimos reclamos"):
+                        for _, recl in df_reclamos_cliente.iterrows():
+                            st.markdown(f"📅 {format_fecha(recl['Fecha y hora'], '%d/%m/%Y')} | 📌 {recl['Tipo de reclamo']} | 👷 {recl.get('Técnico', 'N/A')}")
+
+                    # Verificar si hay cambios desde reclamos
+                    cambios_detectados = False
+                    for campo, nuevo_valor in zip(["Dirección", "Teléfono", "N° de Precinto"], [nueva_direccion, nuevo_telefono, nuevo_precinto]):
+                        reclamos_valor = df_reclamos_cliente[campo].dropna().astype(str).str.strip().unique()
+                        if len(reclamos_valor) > 0 and nuevo_valor.strip() not in reclamos_valor:
+                            cambios_detectados = True
+
+                    if cambios_detectados:
+                        st.info("📌 Se detectaron datos nuevos distintos a los reclamos recientes. Podés actualizarlos si es necesario.")
+
                     actualizar = st.form_submit_button("💾 Actualizar datos del cliente", use_container_width=True)
 
                 if actualizar:
                     with st.spinner("Actualizando cliente..."):
                         try:
-                            index = cliente_row.index[0] + 2  # Sumar 2 por encabezado y base 1
+                            index = cliente_row.index[0] + 2
 
                             updates = [
                                 {"range": f"B{index}", "values": [[nuevo_sector.upper()]]},
                                 {"range": f"C{index}", "values": [[nuevo_nombre.upper()]]},
                                 {"range": f"D{index}", "values": [[nueva_direccion.upper()]]},
                                 {"range": f"E{index}", "values": [[nuevo_telefono]]},
-                                {"range": f"F{index}", "values": [[nuevo_precinto]]}
+                                {"range": f"F{index}", "values": [[nuevo_precinto]]},
+                                {"range": f"H{index}", "values": [[format_fecha(ahora_argentina())]]}
                             ]
 
                             success, error = api_manager.safe_sheet_operation(
@@ -1013,16 +923,20 @@ elif opcion == "Gestión de clientes" and has_permission('gestion_clientes'):
             guardar_cliente = st.form_submit_button("💾 Guardar nuevo cliente", use_container_width=True)
 
             if guardar_cliente:
-                if not nuevo_nro or not nuevo_nombre:
-                    st.error("⚠️ Debés ingresar al menos el N° de cliente y el nombre.")
-                elif nuevo_nro in df_clientes["Nº Cliente"].values:
+                if not nuevo_nombre.strip() or not nueva_direccion.strip() or not nuevo_sector.strip():
+                    st.error("⚠️ Debés ingresar nombre, dirección y sector.")
+                elif nuevo_nro and nuevo_nro in df_clientes["Nº Cliente"].values:
                     st.warning("⚠️ Este cliente ya existe.")
                 else:
                     with st.spinner("Guardando nuevo cliente..."):
                         try:
+                            import uuid
+                            nuevo_id = str(uuid.uuid4())
+
                             nueva_fila = [
                                 nuevo_nro, nuevo_sector.upper(), nuevo_nombre.upper(),
-                                nueva_direccion.upper(), nuevo_telefono, nuevo_precinto
+                                nueva_direccion.upper(), nuevo_telefono, nuevo_precinto, nuevo_id,
+                                format_fecha(ahora_argentina())
                             ]
 
                             success, error = api_manager.safe_sheet_operation(
@@ -1312,6 +1226,11 @@ elif opcion == "Seguimiento técnico" and user_role == 'admin':
             "Grupo A": [], "Grupo B": [], "Grupo C": [], "Grupo D": []
         }
 
+    if st.button("🔄 Refrescar reclamos"):
+        df_reclamos = cargar_reclamos()
+        st.cache_data.clear()
+        st.rerun()
+
     grupos_activos = st.slider("🛠️ Cantidad de grupos de trabajo activos", 1, 4, 2)
 
     st.markdown("### 👥 Asignar técnicos a cada grupo")
@@ -1326,9 +1245,19 @@ elif opcion == "Seguimiento técnico" and user_role == 'admin':
     st.markdown("---")
     st.markdown("### 📋 Reclamos pendientes para asignar")
 
+    df_reclamos.columns = df_reclamos.columns.str.strip()
+    df_reclamos["id"] = df_reclamos["UUID"].astype(str).str.strip()
+    df_reclamos["Fecha y hora"] = pd.to_datetime(df_reclamos["Fecha y hora"], dayfirst=True, errors='coerce')
+
     df_pendientes = df_reclamos[df_reclamos["Estado"] == "Pendiente"].copy()
-    df_pendientes["id"] = df_pendientes["Nº Cliente"].astype(str).str.strip()
-    df_pendientes["Fecha y hora"] = pd.to_datetime(df_pendientes["Fecha y hora"], dayfirst=True, errors='coerce')
+
+    filtro_sector = st.selectbox("Filtrar por sector", ["Todos"] + sorted(df_pendientes["Sector"].dropna().unique()))
+    filtro_tipo = st.selectbox("Filtrar por tipo de reclamo", ["Todos"] + sorted(df_pendientes["Tipo de reclamo"].dropna().unique()))
+
+    if filtro_sector != "Todos":
+        df_pendientes = df_pendientes[df_pendientes["Sector"] == filtro_sector]
+    if filtro_tipo != "Todos":
+        df_pendientes = df_pendientes[df_pendientes["Tipo de reclamo"] == filtro_tipo]
 
     def format_fecha(fecha):
         if pd.isna(fecha): return "Sin fecha"
@@ -1387,7 +1316,7 @@ elif opcion == "Seguimiento técnico" and user_role == 'admin':
 
         resumen_tipos = " - ".join([f"{v} {k}" for k, v in reclamos_grupo["Tipo de reclamo"].value_counts().items()])
         sectores = ", ".join(sorted(set(reclamos_grupo["Sector"].astype(str))))
-        st.markdown(f"{resumen_tipos}")
+        st.markdown(resumen_tipos)
         st.markdown(f"Sectores: {sectores}")
 
         materiales_total = {}
@@ -1431,27 +1360,38 @@ elif opcion == "Seguimiento técnico" and user_role == 'admin':
     st.markdown("---")
 
     if st.button("💾 Guardar cambios y pasar a 'En curso'", use_container_width=True):
-        with st.spinner("Actualizando reclamos..."):
-            updates = []
-            for grupo, ids in st.session_state.asignaciones_grupos.items():
-                tecnicos = st.session_state.tecnicos_grupos[grupo]
-                tecnicos_str = ", ".join(tecnicos).upper() if tecnicos else ""
-                for reclamo_id in ids:
-                    df_reclamos["id"] = df_reclamos["Nº Cliente"].astype(str).str.strip()
-                    fila = df_reclamos[df_reclamos["id"] == reclamo_id]
-                    if not fila.empty:
-                        index = fila.index[0] + 2
-                        updates.append({"range": f"I{index}", "values": [["En curso"]]})
-                        updates.append({"range": f"J{index}", "values": [[tecnicos_str]]})
-            if updates:
-                success, error = api_manager.safe_sheet_operation(batch_update_sheet, sheet_reclamos, updates, is_batch=True)
-                if success:
-                    st.success("✅ Reclamos actualizados correctamente en la hoja.")
-                    st.cache_data.clear()
-                    time.sleep(3)
-                    st.rerun()
-                else:
-                    st.error("❌ Error al actualizar: " + str(error))
+        errores = []
+        for grupo, reclamos in st.session_state.asignaciones_grupos.items():
+            if reclamos and not st.session_state.tecnicos_grupos[grupo]:
+                errores.append(grupo)
+
+        if errores:
+            st.warning(f"⚠️ Los siguientes grupos tienen reclamos asignados pero sin técnicos: {', '.join(errores)}")
+        else:
+            with st.spinner("Actualizando reclamos..."):
+                updates = []
+                for grupo, ids in st.session_state.asignaciones_grupos.items():
+                    tecnicos = st.session_state.tecnicos_grupos[grupo]
+                    tecnicos_str = ", ".join(tecnicos).upper() if tecnicos else ""
+                    for reclamo_id in ids:
+                        fila = df_reclamos[df_reclamos["UUID"] == reclamo_id]
+                        if not fila.empty:
+                            index = fila.index[0] + 2
+                            updates.append({"range": f"I{index}", "values": [["En curso"]]})
+                            updates.append({"range": f"J{index}", "values": [[tecnicos_str]]})
+                        else:
+                            st.warning(f"⚠️ Reclamo con ID {reclamo_id} no encontrado en la hoja.")
+
+                if updates:
+                    success, error = api_manager.safe_sheet_operation(batch_update_sheet, sheet_reclamos, updates, is_batch=True)
+                    if success:
+                        st.success("✅ Reclamos actualizados correctamente en la hoja.")
+                        st.cache_data.clear()
+                        df_reclamos = cargar_reclamos()
+                        time.sleep(3)
+                        st.rerun()
+                    else:
+                        st.error("❌ Error al actualizar: " + str(error))
 
     if st.button("📅 Generar PDF de asignaciones por grupo", use_container_width=True):
         with st.spinner("Generando PDF..."):
@@ -1549,13 +1489,11 @@ elif opcion == "Cierre de Reclamos" and has_permission('cierre_reclamos'):
     st.subheader("✅ Cierre de reclamos en curso")
 
     # Normalización de datos
+    df_reclamos["UUID"] = df_reclamos["UUID"].astype(str).str.strip()
     df_reclamos["Nº Cliente"] = df_reclamos["Nº Cliente"].astype(str).str.strip()
     df_reclamos["Técnico"] = df_reclamos["Técnico"].astype(str).fillna("")
-
-    # Procesamiento robusto de fechas usando la función centralizada
     df_reclamos["Fecha y hora"] = df_reclamos["Fecha y hora"].apply(parse_fecha)
 
-    # 👉 NUEVO: Buscar y reasignar técnico por cliente (sin expander)
     st.markdown("### 🔄 Reasignar técnico por Nº de cliente")
     cliente_busqueda = st.text_input("🔢 Ingresá el N° de Cliente para buscar", key="buscar_cliente_tecnico").strip()
     if cliente_busqueda:
@@ -1571,10 +1509,7 @@ elif opcion == "Cierre de Reclamos" and has_permission('cierre_reclamos'):
             st.markdown(f"📅 Fecha del reclamo: `{format_fecha(reclamo['Fecha y hora'])}`")
 
             tecnicos_actuales_raw = [t.strip().lower() for t in reclamo["Técnico"].split(",") if t.strip()]
-            tecnicos_actuales = [
-                tecnico for tecnico in TECNICOS_DISPONIBLES
-                if tecnico.lower() in tecnicos_actuales_raw
-            ]
+            tecnicos_actuales = [tecnico for tecnico in TECNICOS_DISPONIBLES if tecnico.lower() in tecnicos_actuales_raw]
             nuevo_tecnico_multiselect = st.multiselect(
                 "👷 Nuevo técnico asignado",
                 options=TECNICOS_DISPONIBLES,
@@ -1587,19 +1522,15 @@ elif opcion == "Cierre de Reclamos" and has_permission('cierre_reclamos'):
                     try:
                         fila_index = reclamo.name + 2
                         nuevo_tecnico = ", ".join(nuevo_tecnico_multiselect).upper()
-
                         updates = [{"range": f"J{fila_index}", "values": [[nuevo_tecnico]]}]
-
                         if reclamo['Estado'] == "Pendiente":
                             updates.append({"range": f"I{fila_index}", "values": [["En curso"]]})
-
                         success, error = api_manager.safe_sheet_operation(
                             batch_update_sheet,
                             sheet_reclamos,
                             updates,
                             is_batch=True
                         )
-
                         if success:
                             st.success("✅ Técnico actualizado correctamente.")
                             st.cache_data.clear()
@@ -1616,9 +1547,7 @@ elif opcion == "Cierre de Reclamos" and has_permission('cierre_reclamos'):
         else:
             st.warning("⚠️ No se encontró un reclamo pendiente o en curso para ese cliente.")
 
-    # 🔽 Parte clásica: ver y resolver reclamos en curso
     en_curso = df_reclamos[df_reclamos["Estado"] == "En curso"].copy()
-
     if en_curso.empty:
         st.info("📭 No hay reclamos en curso en este momento.")
     else:
@@ -1667,25 +1596,22 @@ elif opcion == "Cierre de Reclamos" and has_permission('cierre_reclamos'):
                     nuevo_precinto = st.text_input("🔒 Precinto", value=precinto_actual, key=f"precinto_{i}")
 
                 with col2:
-                    if st.button("✅ Resuelto", key=f"resolver_{i}", use_container_width=True):
+                    if st.button("✅ Resuelto", key=f"resolver_{row['UUID']}", use_container_width=True):
                         with st.spinner("Cerrando reclamo..."):
                             try:
-                                updates = [{"range": f"I{i + 2}", "values": [["Resuelto"]]}]
-
+                                fila_index = row.name + 2
+                                updates = [{"range": f"I{fila_index}", "values": [["Resuelto"]]}]
                                 if len(COLUMNAS_RECLAMOS) > 12:
                                     fecha_resolucion = format_fecha(ahora_argentina())
-                                    updates.append({"range": f"M{i + 2}", "values": [[fecha_resolucion]]})
-
+                                    updates.append({"range": f"M{fila_index}", "values": [[fecha_resolucion]]})
                                 if nuevo_precinto.strip() and nuevo_precinto != precinto_actual:
-                                    updates.append({"range": f"F{i + 2}", "values": [[nuevo_precinto.strip()]]})
-
+                                    updates.append({"range": f"F{fila_index}", "values": [[nuevo_precinto.strip()]]})
                                 success, error = api_manager.safe_sheet_operation(
                                     batch_update_sheet,
                                     sheet_reclamos,
                                     updates,
                                     is_batch=True
                                 )
-
                                 if success:
                                     if nuevo_precinto.strip() and nuevo_precinto != precinto_actual and not cliente_info.empty:
                                         index_cliente_en_clientes = cliente_info.index[0] + 2
@@ -1710,12 +1636,13 @@ elif opcion == "Cierre de Reclamos" and has_permission('cierre_reclamos'):
                                     st.exception(e)
 
                 with col3:
-                    if st.button("↩️ Pendiente", key=f"volver_{i}", use_container_width=True):
+                    if st.button("↩️ Pendiente", key=f"volver_{row['UUID']}", use_container_width=True):
                         with st.spinner("Cambiando estado..."):
                             try:
+                                fila_index = row.name + 2
                                 updates = [
-                                    {"range": f"I{i + 2}", "values": [["Pendiente"]]},
-                                    {"range": f"J{i + 2}", "values": [[""]]}
+                                    {"range": f"I{fila_index}", "values": [["Pendiente"]]},
+                                    {"range": f"J{fila_index}", "values": [[""]]}
                                 ]
                                 success, error = api_manager.safe_sheet_operation(
                                     batch_update_sheet,
@@ -1736,47 +1663,30 @@ elif opcion == "Cierre de Reclamos" and has_permission('cierre_reclamos'):
                                 st.error(f"❌ Error inesperado: {str(e)}")
                                 if DEBUG_MODE:
                                     st.exception(e)
-
                 st.divider()
 
     st.markdown("---")
     st.markdown("### 🗑️ Limpieza de reclamos antiguos")
-    
-    # Calcular reclamos resueltos con más de 10 días
-    # Obtener zona horaria de Argentina
+
     tz_argentina = pytz.timezone("America/Argentina/Buenos_Aires")
-    
-    # Filtrar reclamos resueltos y asegurar que las fechas estén en zona horaria Argentina
     df_resueltos = df_reclamos[df_reclamos["Estado"] == "Resuelto"].copy()
-    
-    # Convertir fechas a datetime y asegurar zona horaria Argentina
     df_resueltos["Fecha y hora"] = pd.to_datetime(df_resueltos["Fecha y hora"])
-    
-    # Aplicar zona horaria solo si no la tiene ya
     if df_resueltos["Fecha y hora"].dt.tz is None:
         df_resueltos["Fecha y hora"] = df_resueltos["Fecha y hora"].dt.tz_localize(tz_argentina)
     else:
         df_resueltos["Fecha y hora"] = df_resueltos["Fecha y hora"].dt.tz_convert(tz_argentina)
-    
-    # Calcular días desde resolución (usando datetime.now() con la misma zona horaria)
     df_resueltos["Dias_resuelto"] = (datetime.now(tz_argentina) - df_resueltos["Fecha y hora"]).dt.days
-    
-    # Filtrar reclamos con más de 10 días resueltos
     df_antiguos = df_resueltos[df_resueltos["Dias_resuelto"] > 10]
-    
+
     st.markdown(f"📅 **Reclamos resueltos con más de 10 días:** {len(df_antiguos)}")
-    
+
     if len(df_antiguos) > 0:
         if st.button("🔍 Ver reclamos antiguos", key="ver_antiguos"):
             st.dataframe(df_antiguos[["Fecha y hora", "Nº Cliente", "Nombre", "Tipo de reclamo", "Dias_resuelto"]])
-            
         if st.button("🗑️ Eliminar reclamos antiguos", key="eliminar_antiguos"):
             with st.spinner("Eliminando reclamos antiguos..."):
                 try:
-                    # Obtener índices de las filas a eliminar (sumando 2 por encabezado y base 1)
                     filas_a_eliminar = [idx + 2 for idx in df_antiguos.index]
-                    
-                    # Eliminar filas en lotes para evitar timeouts
                     batch_size = 50
                     for i in range(0, len(filas_a_eliminar), batch_size):
                         batch = filas_a_eliminar[i:i + batch_size]
@@ -1785,21 +1695,18 @@ elif opcion == "Cierre de Reclamos" and has_permission('cierre_reclamos'):
                                 "range": {
                                     "sheetId": sheet_reclamos.id,
                                     "dimension": "ROWS",
-                                    "startIndex": fila - 1,  # Google Sheets usa base 0
+                                    "startIndex": fila - 1,
                                     "endIndex": fila
                                 }
                             }
                         } for fila in batch]
-                        
                         success, error = api_manager.safe_sheet_operation(
                             sheet_reclamos.spreadsheet.batch_update,
                             {"requests": requests}
                         )
-                        
                         if not success:
                             st.error(f"Error al eliminar lote {i//batch_size + 1}: {error}")
                             break
-                    
                     if success:
                         st.success(f"✅ Se eliminaron {len(df_antiguos)} reclamos antiguos correctamente.")
                         st.cache_data.clear()
@@ -1809,11 +1716,10 @@ elif opcion == "Cierre de Reclamos" and has_permission('cierre_reclamos'):
                     st.error(f"❌ Error al eliminar reclamos: {str(e)}")
                     if DEBUG_MODE:
                         st.exception(e)
-    
+
     st.markdown('</div>', unsafe_allow_html=True)
 
 # --------------------------
-
 # NUEVO FOOTER - RESUMEN DE LA JORNADA
 # --------------------------
 st.markdown("---")
@@ -1899,4 +1805,11 @@ else:
 # Mostrar fecha y hora actual del sistema
 st.markdown(f"*Última actualización: {datetime.now(argentina).strftime('%d/%m/%Y %H:%M')}*")
 
-st.markdown('</div>', unsafe_allow_html=True)
+st.markdown("""
+    <div style='text-align: center; margin-top: 20px; font-size: 0.9em; color: gray;'>
+        © 2025 - Hecho con amor por: 
+        <a href="https://instagram.com/mellamansebax" target="_blank" style="text-decoration: none; color: inherit; font-weight: bold;">
+            Sebastián Andrés
+        </a> 💜
+    </div>
+""", unsafe_allow_html=True)
