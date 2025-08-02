@@ -56,29 +56,7 @@ from config.settings import (
     DEBUG_MODE
 )
 
-# --------------------------------------------------
-# INICIALIZACIÓN GARANTIZADA
-# --------------------------------------------------
-class AppState:
-    def __init__(self):
-        self._init_state()
-        
-    def _init_state(self):
-        """Inicializa todos los estados necesarios"""
-        defaults = {
-            'app_initialized': False,
-            'df_reclamos': pd.DataFrame(),
-            'df_clientes': pd.DataFrame(),
-            'last_update': None,
-            'modo_oscuro': is_system_dark_mode()
-        }
-        
-        for key, value in defaults.items():
-            if key not in st.session_state:
-                st.session_state[key] = value
 
-# Uso:
-app_state = AppState()
 # --------------------------
 # INICIALIZACIONES
 # --------------------------
@@ -277,6 +255,30 @@ with st.sidebar:
 
 # Aplicar estilos personalizados según modo
 st.markdown(get_main_styles(dark_mode=st.session_state.modo_oscuro), unsafe_allow_html=True)
+
+# --------------------------------------------------
+# INICIALIZACIÓN GARANTIZADA
+# --------------------------------------------------
+class AppState:
+    def __init__(self):
+        self._init_state()
+        
+    def _init_state(self):
+        """Inicializa todos los estados necesarios"""
+        defaults = {
+            'app_initialized': False,
+            'df_reclamos': pd.DataFrame(),
+            'df_clientes': pd.DataFrame(),
+            'last_update': None,
+            'modo_oscuro': is_system_dark_mode()
+        }
+        
+        for key, value in defaults.items():
+            if key not in st.session_state:
+                st.session_state[key] = value
+
+# Uso:
+app_state = AppState()
 
 # --------------------------
 # CONEXIÓN CON GOOGLE SHEETS
