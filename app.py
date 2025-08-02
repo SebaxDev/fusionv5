@@ -1447,7 +1447,7 @@ elif opcion == "Seguimiento técnico" and user_role == 'admin':
             for i, grupo in enumerate(["Grupo A", "Grupo B", "Grupo C", "Grupo D"][:grupos_activos]):
                 tecnicos = st.session_state.tecnicos_grupos[grupo]
                 tecnicos_str = ", ".join(tecnicos[:2]) + ("..." if len(tecnicos) > 2 else "") if tecnicos else "Sin técnicos"
-                if cols_grupo[i].button(f"➕ {grupo[-1]} ({tecnicos_str})", key=f"asignar_{grupo}_{row['id']}"):
+                if cols_grupo[i].button(f"➕ {grupo[-1]} ({tecnicos_str})", key=f"asignar_{grupo}_{row['ID Reclamo']}"):
                     if row["id"] not in asignados:
                         st.session_state.asignaciones_grupos[grupo].append(row["id"])
                         st.rerun()
@@ -1777,7 +1777,7 @@ elif opcion == "Cierre de Reclamos" and has_permission('cierre_reclamos'):
                     nuevo_precinto = st.text_input("🔒 Precinto", value=precinto_actual, key=f"precinto_{i}")
 
                 with col2:
-                    if st.button("✅ Resuelto", key=f"resolver_{row['UUID']}", use_container_width=True):
+                    if st.button("✅ Resuelto", key=f"resolver_{row['ID Reclamo']}", use_container_width=True):
                         with st.spinner("Cerrando reclamo..."):
                             try:
                                 fila_index = row.name + 2
@@ -1817,7 +1817,7 @@ elif opcion == "Cierre de Reclamos" and has_permission('cierre_reclamos'):
                                     st.exception(e)
 
                 with col3:
-                    if st.button("↩️ Pendiente", key=f"volver_{row['UUID']}", use_container_width=True):
+                    if st.button("↩️ Pendiente", key=f"volver_{row['ID Reclamo']}", use_container_width=True):
                         with st.spinner("Cambiando estado..."):
                             try:
                                 fila_index = row.name + 2
