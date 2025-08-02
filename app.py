@@ -1111,18 +1111,13 @@ elif opcion == "Gestión de clientes" and has_permission('gestion_clientes'):
 
 elif opcion == "Imprimir reclamos" and has_permission('imprimir_reclamos'):
     st.markdown('<div class="section-container">', unsafe_allow_html=True)
-    st.subheader("🖨️ Seleccionar reclamos para imprimir (formato técnico compacto)")
+    st.subheader("📨️ Seleccionar reclamos para imprimir (formato técnico compacto)")
 
     try:
         # Preparar datos con manejo robusto de fechas
         df_pdf = df_reclamos.copy()
 
-        # Convertir fechas y manejar posibles errores
-        df_pdf["Fecha y hora"] = pd.to_datetime(
-            df_pdf["Fecha y hora"],
-            dayfirst=True,
-            errors='coerce'
-        )
+        df_pdf["Fecha y hora"] = pd.to_datetime(df_pdf["Fecha y hora"], dayfirst=True, errors='coerce')
 
         df_merged = pd.merge(
             df_pdf,
@@ -1132,15 +1127,11 @@ elif opcion == "Imprimir reclamos" and has_permission('imprimir_reclamos'):
             suffixes=("", "_cliente")
         )
 
-        # Filtrar por sectores disponibles
-        df_merged = df_merged[df_merged["Sector"].isin(SECTORES_DISPONIBLES)]
-
         with st.expander("🕒 Reclamos pendientes de resolución", expanded=True):
             df_pendientes = df_merged[df_merged["Estado"].astype(str).str.strip().str.lower() == "pendiente"]
             if not df_pendientes.empty:
                 df_pendientes_display = df_pendientes.copy()
                 df_pendientes_display["Fecha y hora"] = df_pendientes_display["Fecha y hora"].apply(lambda f: format_fecha(f, '%d/%m/%Y %H:%M'))
-
                 st.dataframe(
                     df_pendientes_display[["Fecha y hora", "Nº Cliente", "Nombre", "Dirección", "Sector", "Tipo de reclamo"]],
                     use_container_width=True
@@ -1148,10 +1139,10 @@ elif opcion == "Imprimir reclamos" and has_permission('imprimir_reclamos'):
             else:
                 st.success("✅ No hay reclamos pendientes actualmente.")
 
-        solo_pendientes = st.checkbox("🧾 Mostrar solo reclamos pendientes para imprimir", value=True)
+        solo_pendientes = st.checkbox("📜 Mostrar solo reclamos pendientes para imprimir", value=True)
 
-        st.markdown("### � Imprimir reclamos por tipo")
-        tipos_disponibles = sorted(df_merged["Tipo de reclamo"].unique())
+        st.markdown("### 📋 Imprimir reclamos por tipo")
+        tipos_disponibles = sorted(df_merged["Tipo de reclamo"].dropna().unique())
         tipos_seleccionados = st.multiselect(
             "Seleccioná tipos de reclamo a imprimir",
             tipos_disponibles,
@@ -1160,9 +1151,8 @@ elif opcion == "Imprimir reclamos" and has_permission('imprimir_reclamos'):
 
         if tipos_seleccionados:
             reclamos_filtrados = df_merged[
-                (df_merged["Estado"] == "Pendiente") &
-                (df_merged["Tipo de reclamo"].isin(tipos_seleccionados)) &
-                (df_merged["Sector"].isin(SECTORES_DISPONIBLES))
+                (df_merged["Estado"].str.strip().str.lower() == "pendiente") &
+                (df_merged["Tipo de reclamo"].isin(tipos_seleccionados))
             ]
 
             if not reclamos_filtrados.empty:
@@ -1186,7 +1176,6 @@ elif opcion == "Imprimir reclamos" and has_permission('imprimir_reclamos'):
                             c.setFont("Helvetica", 13)
 
                             fecha_pdf = format_fecha(reclamo['Fecha y hora'], '%d/%m/%Y %H:%M')
-
                             lineas = [
                                 f"Fecha: {fecha_pdf}",
                                 f"Dirección: {reclamo['Dirección']} - Tel: {reclamo['Teléfono']}",
@@ -1194,7 +1183,6 @@ elif opcion == "Imprimir reclamos" and has_permission('imprimir_reclamos'):
                                 f"Tipo: {reclamo['Tipo de reclamo']}",
                                 f"Detalles: {reclamo['Detalles'][:100]}..." if len(reclamo['Detalles']) > 100 else f"Detalles: {reclamo['Detalles']}",
                             ]
-
                             for linea in lineas:
                                 c.drawString(40, y, linea)
                                 y -= 12
@@ -1216,21 +1204,18 @@ elif opcion == "Imprimir reclamos" and has_permission('imprimir_reclamos'):
                         buffer.seek(0)
 
                         st.download_button(
-                            label="📥 Descargar PDF filtrado por tipo",
+                            label="📅 Descargar PDF filtrado por tipo",
                             data=buffer,
                             file_name=f"reclamos_{'_'.join(tipos_seleccionados)}.pdf",
                             mime="application/pdf"
                         )
             else:
-                st.info("No hay reclamos pendientes para los tipos seleccionados en tus sectores asignados.")
+                st.info("No hay reclamos pendientes para los tipos seleccionados.")
 
         st.markdown("### 📋 Selección manual de reclamos")
 
         if solo_pendientes:
-            df_merged = df_merged[df_merged["Estado"] == "Pendiente"]
-
-        # Asegurarse de mostrar solo los sectores disponibles
-        df_merged = df_merged[df_merged["Sector"].isin(SECTORES_DISPONIBLES)]
+            df_merged = df_merged[df_merged["Estado"].astype(str).str.strip().str.lower() == "pendiente"]
 
         selected = st.multiselect(
             "Seleccioná los reclamos a imprimir:",
@@ -1258,7 +1243,6 @@ elif opcion == "Imprimir reclamos" and has_permission('imprimir_reclamos'):
                     c.setFont("Helvetica", 13)
 
                     fecha_pdf = format_fecha(reclamo['Fecha y hora'], '%d/%m/%Y %H:%M')
-
                     lineas = [
                         f"Fecha: {fecha_pdf}",
                         f"Dirección: {reclamo['Dirección']} - Tel: {reclamo['Teléfono']}",
@@ -1266,7 +1250,6 @@ elif opcion == "Imprimir reclamos" and has_permission('imprimir_reclamos'):
                         f"Tipo: {reclamo['Tipo de reclamo']}",
                         f"Detalles: {reclamo['Detalles'][:100]}..." if len(reclamo['Detalles']) > 100 else f"Detalles: {reclamo['Detalles']}",
                     ]
-
                     for linea in lineas:
                         c.drawString(40, y, linea)
                         y -= 12
@@ -1288,7 +1271,7 @@ elif opcion == "Imprimir reclamos" and has_permission('imprimir_reclamos'):
                 buffer.seek(0)
 
                 st.download_button(
-                    label="📥 Descargar PDF seleccionados",
+                    label="📅 Descargar PDF seleccionados",
                     data=buffer,
                     file_name="reclamos_seleccionados.pdf",
                     mime="application/pdf"
@@ -1296,65 +1279,6 @@ elif opcion == "Imprimir reclamos" and has_permission('imprimir_reclamos'):
 
         elif not selected:
             st.info("Seleccioná al menos un reclamo para generar el PDF.")
-
-        st.markdown("### 📦 Exportar todos los reclamos 'Pendiente' y 'En curso'")
-        todos_filtrados = df_merged[df_merged["Estado"].isin(["Pendiente", "En curso"])].copy()
-
-        if not todos_filtrados.empty:
-            if st.button("📄 Generar PDF de todos los reclamos activos", key="pdf_todos"):
-                with st.spinner("Generando PDF completo..."):
-                    buffer = io.BytesIO()
-                    c = canvas.Canvas(buffer, pagesize=A4)
-                    width, height = A4
-                    y = height - 40
-
-                    c.setFont("Helvetica-Bold", 18)
-                    c.drawString(40, y, f"TODOS LOS RECLAMOS ACTIVOS - {datetime.now().strftime('%d/%m/%Y')}")
-                    y -= 30
-
-                    for i, (_, reclamo) in enumerate(todos_filtrados.iterrows()):
-                        c.setFont("Helvetica-Bold", 16)
-                        c.drawString(40, y, f"#{reclamo['Nº Cliente']} - {reclamo['Nombre']} ({reclamo['Sector']})")
-                        y -= 15
-                        c.setFont("Helvetica", 13)
-
-                        fecha_pdf = format_fecha(reclamo['Fecha y hora'], '%d/%m/%Y %H:%M')
-
-                        lineas = [
-                            f"Fecha: {fecha_pdf}",
-                            f"Dirección: {reclamo['Dirección']} - Tel: {reclamo['Teléfono']}",
-                            f"Sector: {reclamo['Sector']} - Precinto: {reclamo.get('N° de Precinto', 'N/A')}",
-                            f"Tipo: {reclamo['Tipo de reclamo']}",
-                            f"Detalles: {reclamo['Detalles'][:100]}..." if len(reclamo['Detalles']) > 100 else f"Detalles: {reclamo['Detalles']}",
-                        ]
-                        for linea in lineas:
-                            c.drawString(40, y, linea)
-                            y -= 12
-
-                        y -= 10
-                        c.line(40, y, width-40, y)
-                        y -= 15
-
-                        if y < 100:
-                            agregar_pie_pdf(c, width, height)
-                            c.showPage()
-                            y = height - 40
-                            c.setFont("Helvetica-Bold", 18)
-                            c.drawString(40, y, f"RECLAMOS ACTIVOS (cont.) - {datetime.now().strftime('%d/%m/%Y')}")
-                            y -= 30
-
-                    agregar_pie_pdf(c, width, height)
-                    c.save()
-                    buffer.seek(0)
-
-                    st.download_button(
-                        label="📥 Descargar TODOS los reclamos activos en PDF",
-                        data=buffer,
-                        file_name="reclamos_activos_completo.pdf",
-                        mime="application/pdf"
-                    )
-        else:
-            st.info("🎉 No hay reclamos activos actualmente en tus sectores asignados.")
 
     except Exception as e:
         st.error(f"❌ Error al generar PDF: {str(e)}")
