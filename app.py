@@ -1136,7 +1136,7 @@ elif opcion == "Imprimir reclamos" and has_permission('imprimir_reclamos'):
         df_merged = df_merged[df_merged["Sector"].isin(SECTORES_DISPONIBLES)]
 
         with st.expander("🕒 Reclamos pendientes de resolución", expanded=True):
-            df_pendientes = df_merged[df_merged["Estado"] == "Pendiente"]
+            df_pendientes = df_merged[df_merged["Estado"].astype(str).str.strip().str.lower() == "pendiente"]
             if not df_pendientes.empty:
                 df_pendientes_display = df_pendientes.copy()
                 df_pendientes_display["Fecha y hora"] = df_pendientes_display["Fecha y hora"].apply(lambda f: format_fecha(f, '%d/%m/%Y %H:%M'))
