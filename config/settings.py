@@ -17,17 +17,24 @@ WORKSHEET_USUARIOS = "usuarios"
 COLUMNAS_RECLAMOS = [
     "Fecha y hora", "Nº Cliente", "Sector", "Nombre", 
     "Dirección", "Teléfono", "Tipo de reclamo", 
-    "Detalles", "Estado", "Técnico", "N° de Precinto", "Atendido por"
+    "Detalles", "Estado", "Técnico", "N° de Precinto", "Atendido por",
+    COLUMNA_ID_RECLAMO  # Agregado al final como en tu hoja
 ]
 
 COLUMNAS_CLIENTES = [
     "Nº Cliente", "Sector", "Nombre", "Dirección", 
-    "Teléfono", "N° de Precinto"
+    "Teléfono", "N° de Precinto", COLUMNA_ID_CLIENTE  # Manteniendo el orden de tu hoja
 ]
 
 COLUMNAS_USUARIOS = [  # Nueva estructura para usuarios
     "username", "password", "nombre", "rol", "activo"
 ]
+
+# --------------------------
+# IDENTIFICADORES ÚNICOS
+# --------------------------
+COLUMNA_ID_RECLAMO = "ID Reclamo"  # Columna P en WORKSHEET_RECLAMOS
+COLUMNA_ID_CLIENTE = "ID Cliente"   # Columna G en WORKSHEET_CLIENTES
 
 # --------------------------
 # ROLES Y PERMISOS
@@ -62,6 +69,8 @@ OPCIONES_PERMISOS = {
 # --------------------------
 # CONFIGURACIÓN DE LA APLICACIÓN
 # --------------------------
+SECTORES_DISPONIBLES = list(range(1, 18))
+
 TECNICOS_DISPONIBLES = [
     "Braian", "Conejo", "Juan", "Junior", "Maxi", 
     "Ramon", "Roque", "Viki", "Oficina", "Base"

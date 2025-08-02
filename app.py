@@ -1,34 +1,60 @@
-"""
-Aplicación principal de gestión de reclamos optimizada
-Versión 2.0 - Con manejo robusto de API y session_state
-"""
-import streamlit as st
-import pandas as pd
-from datetime import datetime
-import pytz
+# --------------------------------------------------
+# Aplicación principal de gestión de reclamos optimizada
+# Versión 2.0 - Con manejo robusto de API y session_state
+# --------------------------------------------------
+
+# Standard library
+import io
+import json
 import time
+from datetime import datetime
+
+# Third-party
+import pandas as pd
+import pytz
+import streamlit as st
 from google.oauth2 import service_account
 import gspread
-from tenacity import retry, wait_exponential, stop_after_attempt
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
-import io
 from streamlit_lottie import st_lottie
-import json
+from tenacity import retry, wait_exponential, stop_after_attempt
 
-
-# Imports de componentes
-from components.auth import has_permission, check_authentication, render_login, render_user_info
-from components.navigation import render_navigation, render_user_info
+# Local components
+from components.auth import has_permission, check_authentication, render_login
+from components.navigation import render_navigation
 from components.metrics_dashboard import render_metrics_dashboard
-from utils.styles import get_main_styles
-
-from utils.data_manager import safe_get_sheet_data, safe_normalize, update_sheet_data, batch_update_sheet
-from utils.api_manager import api_manager, init_api_session_state  # Import modificado
-from utils.pdf_utils import agregar_pie_pdf
-from config.settings import *
 from components.user_widget import show_user_widget
+
+# Utils
+from utils.styles import get_main_styles
+from utils.data_manager import safe_get_sheet_data, safe_normalize, update_sheet_data, batch_update_sheet
+from utils.api_manager import api_manager, init_api_session_state
+from utils.pdf_utils import agregar_pie_pdf
 from utils.date_utils import parse_fecha, es_fecha_valida, format_fecha, ahora_argentina
+
+# Agregar aquí la nueva función
+def generar_id_unico():
+    """Genera un ID único para reclamos"""
+    import uuid
+    return str(uuid.uuid4())[:8].upper()
+
+# Config
+from config.settings import (
+    SHEET_ID,
+    WORKSHEET_RECLAMOS,
+    WORKSHEET_CLIENTES, 
+    WORKSHEET_USUARIOS,
+    COLUMNAS_RECLAMOS,
+    COLUMNAS_CLIENTES,
+    COLUMNAS_USUARIOS,
+    SECTORES_DISPONIBLES,
+    TIPOS_RECLAMO,
+    TECNICOS_DISPONIBLES,
+    MATERIALES_POR_RECLAMO,
+    ROUTER_POR_SECTOR,
+    DEBUG_MODE
+)
 
 # --------------------------------------------------
 # INICIALIZACIÓN GARANTIZADA
@@ -38,21 +64,18 @@ class AppState:
         self._init_state()
         
     def _init_state(self):
-        if 'app_initialized' not in st.session_state:
-            init_api_session_state()
-            st.session_state.update({
-                'app_initialized': True,
-                'df_reclamos': pd.DataFrame(),
-                'df_clientes': pd.DataFrame(),
-                'last_update': None
-            })
-    
-    def update_data(self, df_reclamos, df_clientes):
-        st.session_state.update({
-            'df_reclamos': df_reclamos,
-            'df_clientes': df_clientes,
-            'last_update': datetime.now()
-        })
+        """Inicializa todos los estados necesarios"""
+        defaults = {
+            'app_initialized': False,
+            'df_reclamos': pd.DataFrame(),
+            'df_clientes': pd.DataFrame(),
+            'last_update': None,
+            'modo_oscuro': is_system_dark_mode()
+        }
+        
+        for key, value in defaults.items():
+            if key not in st.session_state:
+                st.session_state[key] = value
 
 # Uso:
 app_state = AppState()
@@ -396,6 +419,90 @@ st.session_state.df_reclamos = df_reclamos
 st.session_state.df_clientes = df_clientes
 
 # --------------------------
+# MIGRACIÓN DE UUID PARA REGISTROS EXISTENTES
+# --------------------------
+
+def migrar_uuids_existentes():
+    """Genera UUIDs para registros existentes que no los tengan"""
+    try:
+        # Para Reclamos
+        if 'ID Reclamo' in df_reclamos.columns:
+            reclamos_sin_uuid = df_reclamos[df_reclamos['ID Reclamo'].isna() | (df_reclamos['ID Reclamo'] == '')]
+            if not reclamos_sin_uuid.empty:
+                st.warning(f"⚠️ Hay {len(reclamos_sin_uuid)} reclamos sin UUID. Generando IDs...")
+                
+                updates_reclamos = []
+                for idx, row in reclamos_sin_uuid.iterrows():
+                    nuevo_uuid = generar_id_unico()
+                    updates_reclamos.append({
+                        "range": f"P{idx + 2}",  # Asumiendo que la columna UUID es la P
+                        "values": [[nuevo_uuid]]
+                    })
+                
+                # Actualizar en lotes de 50 para evitar timeout
+                batch_size = 50
+                for i in range(0, len(updates_reclamos), batch_size):
+                    batch = updates_reclamos[i:i + batch_size]
+                    success, error = api_manager.safe_sheet_operation(
+                        batch_update_sheet,
+                        sheet_reclamos,
+                        batch,
+                        is_batch=True
+                    )
+                    if not success:
+                        st.error(f"Error al actualizar lote de reclamos: {error}")
+                        return False
+                
+                st.success("✅ UUIDs generados para reclamos existentes")
+                st.cache_data.clear()
+                return True
+
+        # Para Clientes
+        if 'ID Cliente' in df_clientes.columns:
+            clientes_sin_uuid = df_clientes[df_clientes['ID Cliente'].isna() | (df_clientes['ID Cliente'] == '')]
+            if not clientes_sin_uuid.empty:
+                st.warning(f"⚠️ Hay {len(clientes_sin_uuid)} clientes sin UUID. Generando IDs...")
+                
+                updates_clientes = []
+                for idx, row in clientes_sin_uuid.iterrows():
+                    nuevo_uuid = generar_id_unico()
+                    updates_clientes.append({
+                        "range": f"G{idx + 2}",  # Asumiendo que la columna UUID es la G
+                        "values": [[nuevo_uuid]]
+                    })
+                
+                # Actualizar en lotes
+                batch_size = 50
+                for i in range(0, len(updates_clientes), batch_size):
+                    batch = updates_clientes[i:i + batch_size]
+                    success, error = api_manager.safe_sheet_operation(
+                        batch_update_sheet,
+                        sheet_clientes,
+                        batch,
+                        is_batch=True
+                    )
+                    if not success:
+                        st.error(f"Error al actualizar lote de clientes: {error}")
+                        return False
+                
+                st.success("✅ UUIDs generados para clientes existentes")
+                st.cache_data.clear()
+                return True
+
+    except Exception as e:
+        st.error(f"❌ Error en la migración de UUIDs: {str(e)}")
+        if DEBUG_MODE:
+            st.exception(e)
+        return False
+
+# Ejecutar la migración solo si el usuario es admin y hay registros sin UUID
+if user_role == 'admin':
+    with st.expander("🔧 Herramientas de administrador", expanded=False):
+        if st.button("🆔 Generar UUIDs para registros existentes"):
+            if migrar_uuids_existentes():
+                st.rerun()
+
+# --------------------------
 # INTERFAZ PRINCIPAL
 # --------------------------
 st.markdown("---")
@@ -525,14 +632,26 @@ if opcion == "Inicio" and has_permission('inicio'):
                     direccion = st.text_input("📍 Dirección", value=cliente_existente.get("Dirección", ""))
                 with col2:
                     telefono = st.text_input("📞 Teléfono", value=cliente_existente.get("Teléfono", ""))
-                    sector = st.text_input("🏩 Sector / Zona", value=cliente_existente.get("Sector", ""))
+                    # Cambiamos el text_input por selectbox para sector
+                    sector = st.selectbox(
+                        "🔢 Sector (1-17)",
+                        options=SECTORES_DISPONIBLES,
+                        index=0,
+                        key="select_sector"
+                    )
             else:
                 with col1:
                     nombre = st.text_input("👤 Nombre del Cliente", placeholder="Nombre completo")
                     direccion = st.text_input("📍 Dirección", placeholder="Dirección completa")
                 with col2:
                     telefono = st.text_input("📞 Teléfono", placeholder="Número de contacto")
-                    sector = st.text_input("🏩 Sector / Zona", placeholder="Coloque número de sector")
+                    # Cambiamos el text_input por selectbox para sector
+                    sector = st.selectbox(
+                        "🔢 Sector (1-17)",
+                        options=SECTORES_DISPONIBLES,
+                        index=0,
+                        key="select_sector_new"
+                    )
 
             tipo_reclamo = st.selectbox("📌 Tipo de Reclamo", TIPOS_RECLAMO)
             detalles = st.text_area("📝 Detalles del Reclamo", placeholder="Describe el problema o solicitud...", height=100)
@@ -551,7 +670,7 @@ if opcion == "Inicio" and has_permission('inicio'):
             campos_obligatorios = {
                 "Nombre": nombre.strip(),
                 "Dirección": direccion.strip(),
-                "Sector": sector.strip(),
+                "Sector": str(sector).strip(),  # Convertimos a string por si acaso
                 "Tipo de reclamo": tipo_reclamo.strip(),
                 "Atendido por": atendido_por.strip()
             }
@@ -567,12 +686,12 @@ if opcion == "Inicio" and has_permission('inicio'):
                         fecha_hora_obj = ahora_argentina()
                         fecha_hora_str = format_fecha(fecha_hora_obj)
                         estado_reclamo = "" if tipo_reclamo.strip().lower() == "desconexion a pedido" else "Pendiente"
-                        id_reclamo = str(uuid.uuid4())
+                        id_reclamo = generar_id_unico()
 
                         fila_reclamo = [
                             fecha_hora_str,
                             nro_cliente,
-                            sector,
+                            str(sector),  # Aseguramos que sea string
                             nombre.upper(),
                             direccion.upper(),
                             telefono,
@@ -603,7 +722,7 @@ if opcion == "Inicio" and has_permission('inicio'):
                             cliente_row_idx = df_clientes[df_clientes["Nº Cliente"] == nro_cliente].index
 
                             if cliente_row_idx.empty:
-                                fila_cliente = [nro_cliente, sector, nombre.upper(), direccion.upper(), telefono, precinto]
+                                fila_cliente = [nro_cliente, str(sector), nombre.upper(), direccion.upper(), telefono, precinto]
                                 success_cliente, _ = api_manager.safe_sheet_operation(sheet_clientes.append_row, fila_cliente)
                                 if success_cliente:
                                     cliente_nuevo = True
@@ -617,8 +736,8 @@ if opcion == "Inicio" and has_permission('inicio'):
                                     updates_cliente.append({"range": f"D{idx}", "values": [[direccion.upper()]]})
                                 if str(df_clientes.at[cliente_row_idx[0], "Teléfono"]).strip() != telefono.strip():
                                     updates_cliente.append({"range": f"E{idx}", "values": [[telefono.strip()]]})
-                                if str(df_clientes.at[cliente_row_idx[0], "Sector"]).strip() != sector.strip():
-                                    updates_cliente.append({"range": f"B{idx}", "values": [[sector.strip()]]})
+                                if str(df_clientes.at[cliente_row_idx[0], "Sector"]).strip() != str(sector).strip():
+                                    updates_cliente.append({"range": f"B{idx}", "values": [[str(sector).strip()]]})
                                 if str(df_clientes.at[cliente_row_idx[0], "N° de Precinto"]).strip() != precinto.strip():
                                     updates_cliente.append({"range": f"F{idx}", "values": [[precinto.strip()]]})
                                 if updates_cliente:
@@ -693,12 +812,13 @@ elif opcion == "Reclamos cargados" and has_permission('reclamos_cargados'):
         st.markdown("#### 🔍 Filtros de búsqueda")
         col1, col2, col3 = st.columns(3)
         estado = col1.selectbox("Estado", ["Todos"] + sorted(df["Estado"].dropna().unique()))
-        sector = col2.selectbox("Sector", ["Todos"] + sorted(df["Sector"].dropna().unique()))
+        # Cambiamos a selectbox con SECTORES_DISPONIBLES
+        sector = col2.selectbox("Sector", ["Todos"] + sorted(SECTORES_DISPONIBLES))
         tipo = col3.selectbox("Tipo de reclamo", ["Todos"] + sorted(df["Tipo de reclamo"].dropna().unique()))
 
         df_filtrado = df.copy()
         if estado != "Todos": df_filtrado = df_filtrado[df_filtrado["Estado"] == estado]
-        if sector != "Todos": df_filtrado = df_filtrado[df_filtrado["Sector"] == sector]
+        if sector != "Todos": df_filtrado = df_filtrado[df_filtrado["Sector"] == str(sector)]  # Convertimos a string para comparar
         if tipo != "Todos": df_filtrado = df_filtrado[df_filtrado["Tipo de reclamo"] == tipo]
 
         st.markdown(f"**Mostrando {len(df_filtrado)} reclamos**")
@@ -726,6 +846,12 @@ elif opcion == "Reclamos cargados" and has_permission('reclamos_cargados'):
                 index=sorted(df["Tipo de reclamo"].unique()).index(reclamo_actual["Tipo de reclamo"]))
             detalles = st.text_area("Detalles", value=reclamo_actual.get("Detalles", ""), height=100)
             precinto = st.text_input("N° de Precinto", value=reclamo_actual.get("N° de Precinto", ""))
+            # Cambiamos a selectbox para sector en la edición
+            sector_edit = st.selectbox(
+                "Sector",
+                options=SECTORES_DISPONIBLES,
+                index=SECTORES_DISPONIBLES.index(int(reclamo_actual["Sector"])) if reclamo_actual["Sector"] in [str(s) for s in SECTORES_DISPONIBLES] else 0
+            )
 
             estado_nuevo = st.selectbox("Nuevo estado", ["Pendiente", "En curso", "Resuelto"],
                 index=["Pendiente", "En curso", "Resuelto"].index(reclamo_actual["Estado"]) if reclamo_actual["Estado"] in ["Pendiente", "En curso", "Resuelto"] else 0)
@@ -745,6 +871,7 @@ elif opcion == "Reclamos cargados" and has_permission('reclamos_cargados'):
                             {"range": f"H{fila}", "values": [[detalles]]},
                             {"range": f"I{fila}", "values": [[estado_nuevo]]},
                             {"range": f"K{fila}", "values": [[precinto]]},
+                            {"range": f"C{fila}", "values": [[str(sector_edit)]]},  # Convertimos a string
                         ]
                         if estado_nuevo == "Pendiente":
                             updates.append({"range": f"J{fila}", "values": [[""]]})
@@ -840,7 +967,13 @@ elif opcion == "Gestión de clientes" and has_permission('gestion_clientes'):
                 with st.form("editar_cliente_form"):
                     col1, col2 = st.columns(2)
                     with col1:
-                        nuevo_sector = st.text_input("🏙️ Sector", value=cliente_actual.get("Sector", ""))
+                        # Cambiamos a selectbox para sector
+                        nuevo_sector = st.selectbox(
+                            "🔢 Sector (1-17)",
+                            options=SECTORES_DISPONIBLES,
+                            index=SECTORES_DISPONIBLES.index(int(cliente_actual["Sector"])) if cliente_actual["Sector"] in [str(s) for s in SECTORES_DISPONIBLES] else 0,
+                            key="edit_sector"
+                        )
                         nuevo_nombre = st.text_input("👤 Nombre", value=cliente_actual.get("Nombre", ""))
                     with col2:
                         nueva_direccion = st.text_input("📍 Dirección", value=cliente_actual.get("Dirección", ""))
@@ -879,7 +1012,7 @@ elif opcion == "Gestión de clientes" and has_permission('gestion_clientes'):
                             index = cliente_row.index[0] + 2
 
                             updates = [
-                                {"range": f"B{index}", "values": [[nuevo_sector.upper()]]},
+                                {"range": f"B{index}", "values": [[str(nuevo_sector)]]},  # Convertimos a string
                                 {"range": f"C{index}", "values": [[nuevo_nombre.upper()]]},
                                 {"range": f"D{index}", "values": [[nueva_direccion.upper()]]},
                                 {"range": f"E{index}", "values": [[nuevo_telefono]]},
@@ -912,7 +1045,13 @@ elif opcion == "Gestión de clientes" and has_permission('gestion_clientes'):
             col1, col2 = st.columns(2)
             with col1:
                 nuevo_nro = st.text_input("🔢 N° de Cliente (nuevo)", placeholder="Número único").strip()
-                nuevo_sector = st.text_input("🏙️ Sector", placeholder="Zona o sector")
+                # Cambiamos a selectbox para sector en nuevo cliente
+                nuevo_sector = st.selectbox(
+                    "🔢 Sector (1-17)",
+                    options=SECTORES_DISPONIBLES,
+                    index=0,
+                    key="new_sector"
+                )
             with col2:
                 nuevo_nombre = st.text_input("👤 Nombre", placeholder="Nombre completo")
                 nueva_direccion = st.text_input("📍 Dirección", placeholder="Dirección completa")
@@ -923,8 +1062,8 @@ elif opcion == "Gestión de clientes" and has_permission('gestion_clientes'):
             guardar_cliente = st.form_submit_button("💾 Guardar nuevo cliente", use_container_width=True)
 
             if guardar_cliente:
-                if not nuevo_nombre.strip() or not nueva_direccion.strip() or not nuevo_sector.strip():
-                    st.error("⚠️ Debés ingresar nombre, dirección y sector.")
+                if not nuevo_nombre.strip() or not nueva_direccion.strip():
+                    st.error("⚠️ Debés ingresar nombre y dirección.")
                 elif nuevo_nro and nuevo_nro in df_clientes["Nº Cliente"].values:
                     st.warning("⚠️ Este cliente ya existe.")
                 else:
@@ -934,8 +1073,13 @@ elif opcion == "Gestión de clientes" and has_permission('gestion_clientes'):
                             nuevo_id = str(uuid.uuid4())
 
                             nueva_fila = [
-                                nuevo_nro, nuevo_sector.upper(), nuevo_nombre.upper(),
-                                nueva_direccion.upper(), nuevo_telefono, nuevo_precinto, nuevo_id,
+                                nuevo_nro, 
+                                str(nuevo_sector),  # Convertimos a string
+                                nuevo_nombre.upper(),
+                                nueva_direccion.upper(), 
+                                nuevo_telefono, 
+                                nuevo_precinto, 
+                                nuevo_id,
                                 format_fecha(ahora_argentina())
                             ]
 
@@ -986,6 +1130,9 @@ elif opcion == "Imprimir reclamos" and has_permission('imprimir_reclamos'):
             suffixes=("", "_cliente")
         )
 
+        # Filtrar por sectores disponibles
+        df_merged = df_merged[df_merged["Sector"].isin(SECTORES_DISPONIBLES)]
+
         with st.expander("🕒 Reclamos pendientes de resolución", expanded=True):
             df_pendientes = df_merged[df_merged["Estado"] == "Pendiente"]
             if not df_pendientes.empty:
@@ -1001,7 +1148,7 @@ elif opcion == "Imprimir reclamos" and has_permission('imprimir_reclamos'):
 
         solo_pendientes = st.checkbox("🧾 Mostrar solo reclamos pendientes para imprimir", value=True)
 
-        st.markdown("### 🧾 Imprimir reclamos por tipo")
+        st.markdown("### � Imprimir reclamos por tipo")
         tipos_disponibles = sorted(df_merged["Tipo de reclamo"].unique())
         tipos_seleccionados = st.multiselect(
             "Seleccioná tipos de reclamo a imprimir",
@@ -1012,7 +1159,8 @@ elif opcion == "Imprimir reclamos" and has_permission('imprimir_reclamos'):
         if tipos_seleccionados:
             reclamos_filtrados = df_merged[
                 (df_merged["Estado"] == "Pendiente") &
-                (df_merged["Tipo de reclamo"].isin(tipos_seleccionados))
+                (df_merged["Tipo de reclamo"].isin(tipos_seleccionados)) &
+                (df_merged["Sector"].isin(SECTORES_DISPONIBLES))
             ]
 
             if not reclamos_filtrados.empty:
@@ -1031,7 +1179,7 @@ elif opcion == "Imprimir reclamos" and has_permission('imprimir_reclamos'):
 
                         for i, (_, reclamo) in enumerate(reclamos_filtrados.iterrows()):
                             c.setFont("Helvetica-Bold", 16)
-                            c.drawString(40, y, f"#{reclamo['Nº Cliente']} - {reclamo['Nombre']}")
+                            c.drawString(40, y, f"#{reclamo['Nº Cliente']} - {reclamo['Nombre']} ({reclamo['Sector']})")
                             y -= 15
                             c.setFont("Helvetica", 13)
 
@@ -1072,17 +1220,20 @@ elif opcion == "Imprimir reclamos" and has_permission('imprimir_reclamos'):
                             mime="application/pdf"
                         )
             else:
-                st.info("No hay reclamos pendientes para los tipos seleccionados.")
+                st.info("No hay reclamos pendientes para los tipos seleccionados en tus sectores asignados.")
 
         st.markdown("### 📋 Selección manual de reclamos")
 
         if solo_pendientes:
             df_merged = df_merged[df_merged["Estado"] == "Pendiente"]
 
+        # Asegurarse de mostrar solo los sectores disponibles
+        df_merged = df_merged[df_merged["Sector"].isin(SECTORES_DISPONIBLES)]
+
         selected = st.multiselect(
             "Seleccioná los reclamos a imprimir:",
             df_merged.index,
-            format_func=lambda x: f"{df_merged.at[x, 'Nº Cliente']} - {df_merged.at[x, 'Nombre']}",
+            format_func=lambda x: f"{df_merged.at[x, 'Nº Cliente']} - {df_merged.at[x, 'Nombre']} ({df_merged.at[x, 'Sector']})",
             key="multiselect_reclamos"
         )
 
@@ -1100,7 +1251,7 @@ elif opcion == "Imprimir reclamos" and has_permission('imprimir_reclamos'):
                 for i, idx in enumerate(selected):
                     reclamo = df_merged.loc[idx]
                     c.setFont("Helvetica-Bold", 16)
-                    c.drawString(40, y, f"#{reclamo['Nº Cliente']} - {reclamo['Nombre']}")
+                    c.drawString(40, y, f"#{reclamo['Nº Cliente']} - {reclamo['Nombre']} ({reclamo['Sector']})")
                     y -= 15
                     c.setFont("Helvetica", 13)
 
@@ -1161,7 +1312,7 @@ elif opcion == "Imprimir reclamos" and has_permission('imprimir_reclamos'):
 
                     for i, (_, reclamo) in enumerate(todos_filtrados.iterrows()):
                         c.setFont("Helvetica-Bold", 16)
-                        c.drawString(40, y, f"#{reclamo['Nº Cliente']} - {reclamo['Nombre']}")
+                        c.drawString(40, y, f"#{reclamo['Nº Cliente']} - {reclamo['Nombre']} ({reclamo['Sector']})")
                         y -= 15
                         c.setFont("Helvetica", 13)
 
@@ -1201,7 +1352,7 @@ elif opcion == "Imprimir reclamos" and has_permission('imprimir_reclamos'):
                         mime="application/pdf"
                     )
         else:
-            st.info("🎉 No hay reclamos activos actualmente.")
+            st.info("🎉 No hay reclamos activos actualmente en tus sectores asignados.")
 
     except Exception as e:
         st.error(f"❌ Error al generar PDF: {str(e)}")
@@ -1246,16 +1397,25 @@ elif opcion == "Seguimiento técnico" and user_role == 'admin':
     st.markdown("### 📋 Reclamos pendientes para asignar")
 
     df_reclamos.columns = df_reclamos.columns.str.strip()
-    df_reclamos["id"] = df_reclamos["UUID"].astype(str).str.strip()
+    df_reclamos["ID Temporal"] = df_reclamos["ID Reclamo"].astype(str).str.strip()
     df_reclamos["Fecha y hora"] = pd.to_datetime(df_reclamos["Fecha y hora"], dayfirst=True, errors='coerce')
 
     df_pendientes = df_reclamos[df_reclamos["Estado"] == "Pendiente"].copy()
 
-    filtro_sector = st.selectbox("Filtrar por sector", ["Todos"] + sorted(df_pendientes["Sector"].dropna().unique()))
-    filtro_tipo = st.selectbox("Filtrar por tipo de reclamo", ["Todos"] + sorted(df_pendientes["Tipo de reclamo"].dropna().unique()))
+    # Cambiamos el filtro de sector para usar SECTORES_DISPONIBLES
+    filtro_sector = st.selectbox(
+        "Filtrar por sector", 
+        ["Todos"] + sorted(SECTORES_DISPONIBLES),
+        format_func=lambda x: f"Sector {x}" if x != "Todos" else x
+    )
+    
+    filtro_tipo = st.selectbox(
+        "Filtrar por tipo de reclamo", 
+        ["Todos"] + sorted(df_pendientes["Tipo de reclamo"].dropna().unique())
+    )
 
     if filtro_sector != "Todos":
-        df_pendientes = df_pendientes[df_pendientes["Sector"] == filtro_sector]
+        df_pendientes = df_pendientes[df_pendientes["Sector"] == str(filtro_sector)]  # Convertimos a string para comparar
     if filtro_tipo != "Todos":
         df_pendientes = df_pendientes[df_pendientes["Tipo de reclamo"] == filtro_tipo]
 
@@ -1489,12 +1649,12 @@ elif opcion == "Cierre de Reclamos" and has_permission('cierre_reclamos'):
     st.subheader("✅ Cierre de reclamos en curso")
 
     # Normalización de datos
-    df_reclamos["UUID"] = df_reclamos["UUID"].astype(str).str.strip()
+    df_reclamos["ID Reclamo"] = df_reclamos["ID Reclamo"].astype(str).str.strip()
     df_reclamos["Nº Cliente"] = df_reclamos["Nº Cliente"].astype(str).str.strip()
     df_reclamos["Técnico"] = df_reclamos["Técnico"].astype(str).fillna("")
     df_reclamos["Fecha y hora"] = df_reclamos["Fecha y hora"].apply(parse_fecha)
 
-    st.markdown("### 🔄 Reasignar técnico por Nº de cliente")
+    st.markdown("### 🔄 Reasignar técnico por N° de cliente")
     cliente_busqueda = st.text_input("🔢 Ingresá el N° de Cliente para buscar", key="buscar_cliente_tecnico").strip()
     if cliente_busqueda:
         reclamos_filtrados = df_reclamos[
@@ -1507,6 +1667,7 @@ elif opcion == "Cierre de Reclamos" and has_permission('cierre_reclamos'):
             st.markdown(f"📌 **Reclamo encontrado:** {reclamo['Tipo de reclamo']} - Estado: {reclamo['Estado']}")
             st.markdown(f"👷 Técnico actual: `{reclamo['Técnico'] or 'No asignado'}`")
             st.markdown(f"📅 Fecha del reclamo: `{format_fecha(reclamo['Fecha y hora'])}`")
+            st.markdown(f"📍 Sector: `{reclamo.get('Sector', 'No especificado')}`")  # Mostrar sector del reclamo
 
             tecnicos_actuales_raw = [t.strip().lower() for t in reclamo["Técnico"].split(",") if t.strip()]
             tecnicos_actuales = [tecnico for tecnico in TECNICOS_DISPONIBLES if tecnico.lower() in tecnicos_actuales_raw]
@@ -1547,7 +1708,20 @@ elif opcion == "Cierre de Reclamos" and has_permission('cierre_reclamos'):
         else:
             st.warning("⚠️ No se encontró un reclamo pendiente o en curso para ese cliente.")
 
+    # Filtro de sector para reclamos en curso
     en_curso = df_reclamos[df_reclamos["Estado"] == "En curso"].copy()
+    
+    # Agregar filtro por sector usando SECTORES_DISPONIBLES
+    filtro_sector = st.selectbox(
+        "🔢 Filtrar por sector", 
+        ["Todos"] + sorted(SECTORES_DISPONIBLES),
+        key="filtro_sector_cierre",
+        format_func=lambda x: f"Sector {x}" if x != "Todos" else x
+    )
+    
+    if filtro_sector != "Todos":
+        en_curso = en_curso[en_curso["Sector"] == str(filtro_sector)]  # Convertir a string para comparación
+
     if en_curso.empty:
         st.info("📭 No hay reclamos en curso en este momento.")
     else:
@@ -1566,7 +1740,7 @@ elif opcion == "Cierre de Reclamos" and has_permission('cierre_reclamos'):
             ]
 
         st.write("### 📋 Reclamos en curso:")
-        df_mostrar = en_curso[["Fecha_formateada", "Nº Cliente", "Nombre", "Tipo de reclamo", "Técnico"]].copy()
+        df_mostrar = en_curso[["Fecha_formateada", "Nº Cliente", "Nombre", "Sector", "Tipo de reclamo", "Técnico"]].copy()
         df_mostrar = df_mostrar.rename(columns={"Fecha_formateada": "Fecha y hora"})
 
         st.dataframe(df_mostrar, use_container_width=True, height=400,
@@ -1574,6 +1748,10 @@ elif opcion == "Cierre de Reclamos" and has_permission('cierre_reclamos'):
                         "Fecha y hora": st.column_config.TextColumn(
                             "Fecha y hora",
                             help="Fecha del reclamo en formato DD/MM/YYYY HH:MM"
+                        ),
+                        "Sector": st.column_config.TextColumn(
+                            "Sector",
+                            help="Número de sector asignado"
                         )
                     })
 
@@ -1586,6 +1764,7 @@ elif opcion == "Cierre de Reclamos" and has_permission('cierre_reclamos'):
                 with col1:
                     st.markdown(f"**#{row['Nº Cliente']} - {row['Nombre']}**")
                     st.markdown(f"📅 {format_fecha(row['Fecha y hora'])}")
+                    st.markdown(f"📍 Sector: {row.get('Sector', 'N/A')}")  # Mostrar sector
                     st.markdown(f"📌 {row['Tipo de reclamo']}")
                     st.markdown(f"👷 {row['Técnico']}")
 
@@ -1682,7 +1861,7 @@ elif opcion == "Cierre de Reclamos" and has_permission('cierre_reclamos'):
 
     if len(df_antiguos) > 0:
         if st.button("🔍 Ver reclamos antiguos", key="ver_antiguos"):
-            st.dataframe(df_antiguos[["Fecha y hora", "Nº Cliente", "Nombre", "Tipo de reclamo", "Dias_resuelto"]])
+            st.dataframe(df_antiguos[["Fecha y hora", "Nº Cliente", "Nombre", "Sector", "Tipo de reclamo", "Dias_resuelto"]])
         if st.button("🗑️ Eliminar reclamos antiguos", key="eliminar_antiguos"):
             with st.spinner("Eliminando reclamos antiguos..."):
                 try:
