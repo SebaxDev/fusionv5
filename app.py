@@ -1435,7 +1435,7 @@ elif opcion == "Seguimiento técnico" and user_role == 'admin':
         df_pendientes = df_pendientes.sort_values("Tipo de reclamo")
 
     asignados = [r for reclamos in st.session_state.asignaciones_grupos.values() for r in reclamos]
-    df_disponibles = df_pendientes[~df_pendientes["id"].isin(asignados)]
+    df_disponibles = df_pendientes[~df_pendientes["ID Reclamo"].isin(asignados)]
 
     for idx, row in df_disponibles.iterrows():
         with st.container():
@@ -1474,7 +1474,7 @@ elif opcion == "Seguimiento técnico" and user_role == 'admin':
         tecnicos = st.session_state.tecnicos_grupos[grupo]
         st.markdown(f"#### 🛠️ {grupo} - Técnicos: {', '.join(tecnicos) if tecnicos else 'Sin asignar'} ({len(reclamos_ids)} reclamos)")
 
-        reclamos_grupo = df_pendientes[df_pendientes["id"].isin(reclamos_ids)]
+        reclamos_grupo = df_pendientes[df_pendientes["ID Reclamo"].isin(reclamos_ids)]
 
         resumen_tipos = " - ".join([f"{v} {k}" for k, v in reclamos_grupo["Tipo de reclamo"].value_counts().items()])
         sectores = ", ".join(sorted(set(reclamos_grupo["Sector"].astype(str))))
@@ -1502,7 +1502,7 @@ elif opcion == "Seguimiento técnico" and user_role == 'admin':
 
         if reclamos_ids:
             for reclamo_id in reclamos_ids:
-                reclamo_data = df_pendientes[df_pendientes["id"] == reclamo_id]
+                reclamo_data = df_pendientes[df_pendientes["ID Reclamo"] == reclamo_id]
                 col1, col2 = st.columns([5, 1])
                 if not reclamo_data.empty:
                     row = reclamo_data.iloc[0]
@@ -1574,7 +1574,7 @@ elif opcion == "Seguimiento técnico" and user_role == 'admin':
                 c.showPage()
                 y = height - 40
 
-                tipos = df_pendientes[df_pendientes["id"].isin(reclamos_ids)]["Tipo de reclamo"].value_counts()
+                tipos = df_pendientes[df_pendientes["ID Reclamo"].isin(reclamos_ids)]["Tipo de reclamo"].value_counts()
                 resumen_tipos = " - ".join([f"{v} {k}" for k, v in tipos.items()])
 
                 c.setFont("Helvetica-Bold", 16)
@@ -1585,7 +1585,7 @@ elif opcion == "Seguimiento técnico" and user_role == 'admin':
                 y -= 25
 
                 for reclamo_id in reclamos_ids:
-                    reclamo_data = df_pendientes[df_pendientes["id"] == reclamo_id]
+                    reclamo_data = df_pendientes[df_pendientes["ID Reclamo"] == reclamo_id]
                     if not reclamo_data.empty:
                         reclamo = reclamo_data.iloc[0]
                         c.setFont("Helvetica-Bold", 14)
