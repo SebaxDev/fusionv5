@@ -73,37 +73,40 @@ class NotificationManager:
     def get_for_user(self, username, unread_only=True, limit=MAX_NOTIFICATIONS):
         """
         Obtiene notificaciones para un usuario con caché local
-        
+
         Args:
             username (str): Nombre de usuario
             unread_only (bool): Solo no leídas
             limit (int): Máximo a devolver
-        
+
         Returns:
             list: Lista de dicts con notificaciones
         """
         try:
             df = safe_get_sheet_data(self.sheet, COLUMNAS_NOTIFICACIONES)
-            
+
             if df.empty:
                 return []
-                
-            # Filtros combinados
+
+            # ⚠️ FIX: Forzar parseo de fechas para evitar errores silenciosos al ordenar
+            df['Fecha_Hora'] = pd.to_datetime(df['Fecha_Hora'], errors='coerce')
+
             mask = (df['Usuario_Destino'].isin([username, 'all']))
             if unread_only:
                 mask &= (df['Leída'] == False)
-                
-            # Orden y límite
-            notifications = (df[mask]
-                           .sort_values('Fecha_Hora', ascending=False)
-                           .head(limit))
-            
+
+            notifications = (
+                df[mask]
+                .sort_values('Fecha_Hora', ascending=False)
+                .head(limit)
+            )
+
             return notifications.to_dict('records')
-            
+
         except Exception as e:
             st.error(f"Error al obtener notificaciones: {str(e)}")
             return []
-            
+         
     def get_unread_count(self, username):
         """Cuenta rápidamente notificaciones no leídas"""
         notifications = self.get_for_user(username, unread_only=True)
