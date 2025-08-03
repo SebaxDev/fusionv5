@@ -31,6 +31,15 @@ def inicializar_estado_grupos():
         if key not in st.session_state:
             st.session_state[key] = value
 
+def _limpiar_asignaciones(df_reclamos):
+    """Limpia asignaciones de reclamos que ya no existen"""
+    ids_validos = set(df_reclamos["ID Reclamo"].astype(str).unique())
+    for grupo in st.session_state.asignaciones_grupos:
+        st.session_state.asignaciones_grupos[grupo] = [
+            id for id in st.session_state.asignaciones_grupos[grupo] 
+            if str(id) in ids_validos
+        ]
+
 def render_planificacion_grupos(df_reclamos, sheet_reclamos, user):
     """
     Muestra la sección de planificación de grupos de trabajo
@@ -52,6 +61,7 @@ def render_planificacion_grupos(df_reclamos, sheet_reclamos, user):
 
     try:
         inicializar_estado_grupos()
+        _limpiar_asignaciones(df_reclamos)
         
         if st.button("🔄 Refrescar reclamos"):
             st.cache_data.clear()
@@ -78,6 +88,8 @@ def render_planificacion_grupos(df_reclamos, sheet_reclamos, user):
 
     except Exception as e:
         st.error(f"❌ Error en la planificación: {str(e)}")
+        if DEBUG_MODE:
+            st.exception(e)
         return {'needs_refresh': False}
     finally:
         st.markdown('</div>', unsafe_allow_html=True)
@@ -107,6 +119,11 @@ def _mostrar_reclamos_disponibles(df_reclamos, grupos_activos):
         errors='coerce'
     )
 
+    # Asegurar que no haya IDs vacíos
+    df_reclamos["ID Reclamo"] = df_reclamos["ID Reclamo"].replace('', pd.NA)
+    df_reclamos["ID Reclamo"] = df_reclamos["ID Reclamo"].fillna(
+        "temp_" + pd.Series(range(len(df_reclamos))).astype(str)
+    
     df_pendientes = df_reclamos[df_reclamos["Estado"] == "Pendiente"].copy()
 
     # Filtros
@@ -159,7 +176,14 @@ def _mostrar_reclamos_disponibles(df_reclamos, grupos_activos):
             for i, grupo in enumerate(["Grupo A", "Grupo B", "Grupo C", "Grupo D"][:grupos_activos]):
                 tecnicos = st.session_state.tecnicos_grupos[grupo]
                 tecnicos_str = ", ".join(tecnicos[:2]) + ("..." if len(tecnicos) > 2 else "") if tecnicos else "Sin técnicos"
-                if cols_grupo[i].button(f"➡️{grupo[-1]} ({tecnicos_str})", key=f"asignar_{grupo}_{row['ID Reclamo']}"):
+                
+                # Clave única para cada botón
+                button_key = f"asignar_{grupo}_{row['ID Reclamo']}_{idx}"
+                
+                if cols_grupo[i].button(
+                    f"➡️{grupo[-1]} ({tecnicos_str})", 
+                    key=button_key
+                ):
                     if row["ID Reclamo"] not in asignados:
                         st.session_state.asignaciones_grupos[grupo].append(row["ID Reclamo"])
                         st.rerun()
@@ -224,7 +248,7 @@ def _mostrar_reclamos_asignados(df_pendientes, grupos_activos):
                 st.markdown(f"- {cant} {mat.replace('_', ' ').title()}")
 
         # Mostrar reclamos asignados
-        for reclamo_id in reclamos_ids:
+        for idx, reclamo_id in enumerate(reclamos_ids):
             reclamo_data = df_pendientes[df_pendientes["ID Reclamo"] == reclamo_id]
             col1, col2 = st.columns([5, 1])
             
@@ -236,7 +260,8 @@ def _mostrar_reclamos_asignados(df_pendientes, grupos_activos):
             else:
                 col1.markdown(f"**Reclamo ID: {reclamo_id} (ya no está pendiente)**")
 
-            if col2.button("❌ Quitar", key=f"quitar_{grupo}_{reclamo_id}"):
+            # Clave única para el botón de quitar
+            if col2.button("❌ Quitar", key=f"quitar_{grupo}_{reclamo_id}_{idx}"):
                 st.session_state.asignaciones_grupos[grupo].remove(reclamo_id)
                 st.rerun()
             
@@ -273,7 +298,7 @@ def _mostrar_acciones_finales(df_reclamos, sheet_reclamos, grupos_activos, mater
         cambios = _guardar_cambios(df_reclamos, sheet_reclamos, grupos_activos)
     
     if col2.button("📄 Generar PDF de asignaciones por grupo", use_container_width=True):
-        _generar_pdf_asignaciones(grupos_activos, materiales_por_grupo, df_reclamos)
+        _generar_pdf_asignaciones(grupos_activos, materiales_por_grupo, df_pendientes)
     
     return cambios
 
