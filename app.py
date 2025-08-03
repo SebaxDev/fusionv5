@@ -241,7 +241,7 @@ def init_google_sheets():
     try:
         return _connect()
     except Exception as e:
-        show_error(f"Error de conexión: {str(e)}")
+        st.error(f"Error de conexión: {str(e)}")
         st.stop()
 
 # Carga con spinner optimizado
