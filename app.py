@@ -530,6 +530,5 @@ if opcion in COMPONENTES and has_permission(COMPONENTES[opcion]["permiso"]):
 # --------------------------
 st.markdown("---")
 with st.container():
-    st.markdown('<div class="section-container">', unsafe_allow_html=True)
     render_resumen_jornada(df_reclamos)
     st.markdown('</div>', unsafe_allow_html=True)
