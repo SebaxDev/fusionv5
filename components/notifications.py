@@ -155,6 +155,9 @@ class NotificationManager:
 
             # Conversión robusta a datetime
             df['Fecha_Hora'] = pd.to_datetime(df['Fecha_Hora'], errors='coerce')
+            
+            # FIX datetime64[ns] and Timestamp:
+            df['Fecha_Hora'] = df['Fecha_Hora'].dt.tz_localize(None)
 
             # Eliminar NaT para evitar errores de comparación
             df_validas = df[df['Fecha_Hora'].notna()].copy()
