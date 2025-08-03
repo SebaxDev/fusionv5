@@ -309,6 +309,7 @@ with st.sidebar:
         st.session_state.modo_oscuro = nuevo_modo
         st.rerun()
 
+    st.write("DEBUG:", 'notification_manager' in st.session_state, st.session_state.get('auth', {}))
     # En el sidebar
     render_notification_bell()
     
