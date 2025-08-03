@@ -154,6 +154,15 @@ with st.sidebar:
     st.markdown("---")
     render_user_widget()
     
+    # Herramientas de administrador (solo visible para admins)
+    if user_role == 'admin':
+        st.markdown("---")
+        st.markdown("**🔧 Herramientas Admin**")
+        if st.button("🆔 Generar UUIDs para registros", 
+                    help="Genera IDs únicos para registros existentes que no los tengan"):
+            if migrar_uuids_existentes():
+                st.rerun()
+    
     st.markdown(f"""
     <div style="margin-top: 20px;">
         <p style="margin:0;"><strong>Versión:</strong> 2.3.0</p>
@@ -163,12 +172,12 @@ with st.sidebar:
     
     st.markdown("""
     <div style='text-align: center; margin-top: 20px; font-size: 0.9em; color: gray;'>
-        Hecho con amor por: 
+        Hecho con amor por:<br> 
         <a href="https://instagram.com/mellamansebax" target="_blank" style="text-decoration: none; color: inherit; font-weight: bold;">
             Sebastián Andrés
         </a> 💜
     </div>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
 # --------------------------
 # INICIALIZACIÓN
