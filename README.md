@@ -1,134 +1,85 @@
-# README - Fusion Reclamos App
+# 📋 Fusion Reclamos App
 
-## 📌 Descripción General
+Sistema integral para la gestión de reclamos técnicos, clientes y operaciones de soporte para empresas de cable e internet.
 
-**Fusion Reclamos App** es una aplicación robusta y optimizada para la gestión integral de reclamos, diseñada para mejorar la eficiencia en el seguimiento, asignación y resolución de incidencias. Desarrollada con Streamlit y conectada a Google Sheets, ofrece una interfaz intuitiva con funcionalidades avanzadas para usuarios con distintos niveles de permisos.
+## 🚀 Características principales
 
----
-
-## 🚀 Características Principales
-
-### 🔐 Autenticación y Roles
-- **Sistema de login seguro** con validación de credenciales.
-- **Roles diferenciados**: `admin` y `user`, con permisos específicos para cada sección.
-- **Modo oscuro/claro** adaptable al sistema del usuario.
-
-### 📋 Gestión de Reclamos
-- **Carga de nuevos reclamos** con validación de clientes existentes.
-- **Detección automática** de reclamos duplicados o activos.
-- **Tipos de reclamo configurables** (ej: "Desconexión a pedido").
-- **Validación robusta** de datos y fechas.
-
-### 📊 Visualización y Filtrado
-- **Dashboard de métricas** con resumen de reclamos.
-- **Filtros avanzados** por estado, sector y tipo de reclamo.
-- **Historial completo** por cliente.
-
-### 🛠️ Asignación y Seguimiento
-- **Asignación a grupos de trabajo** (hasta 4 grupos configurables).
-- **Distribución por técnicos** con visualización de carga laboral.
-- **Seguimiento en tiempo real** de reclamos "Pendientes" y "En curso".
-
-### 📄 Generación de Reportes
-- **PDFs personalizados** para reclamos, desconexiones y asignaciones.
-- **Exportación a CSV** del historial de clientes.
-- **Formato técnico compacto** para impresión.
-
-### 🔄 Sincronización con Google Sheets
-- **Conexión segura** mediante Service Account.
-- **Manejo optimizado** de operaciones de lectura/escritura.
-- **Actualización en tiempo real** con caché inteligente.
+- 📥 **Carga rápida de reclamos técnicos**.
+- 🧑‍💻 **Gestión completa de clientes**.
+- 📊 **Panel de métricas y visualización de actividad**.
+- 🔔 **Notificaciones internas para el personal**.
+- 🧾 **Impresión de partes de reclamos en PDF**.
+- 📆 **Planificación y seguimiento técnico**.
+- ✅ **Cierre de reclamos y seguimiento del historial**.
+- 🔐 **Sistema de login con control de permisos por rol**.
+- 🌙 **Modo claro / oscuro con persistencia de preferencia**.
+- 📲 **Optimizado para uso móvil**.
 
 ---
 
-## 🛠️ Tecnologías Utilizadas
+## 🧠 Tecnologías utilizadas
 
-- **Frontend**: Streamlit (Python)
-- **Backend**: Python 3.9+
-- **Base de datos**: Google Sheets (como backend)
-- **Librerías clave**:
-  - `pandas` para manejo de datos
-  - `gspread` para conexión con Sheets
-  - `reportlab` para generación de PDFs
-  - `pytz` para manejo de zonas horarias
-
----
-
-## 📈 Funcionalidades por Sección
-
-### 1. **Inicio - Nuevo Reclamo**
-- Carga rápida con autocompletado para clientes existentes.
-- Validación de campos obligatorios.
-- Creación automática de nuevos clientes.
-
-### 2. **Reclamos Cargados**
-- Edición masiva o individual de reclamos.
-- Gestión especial de "Desconexiones a pedido".
-- Cambio de estados (Pendiente/En curso/Resuelto).
-
-### 3. **Gestión de Clientes**
-- Búsqueda avanzada por número de cliente.
-- Edición de información (solo para admins).
-- Visualización del historial completo.
-
-### 4. **Imprimir Reclamos**
-- Selección manual o por filtros.
-- Generación de PDFs optimizados para campo.
-- Exportación de reclamos activos.
-
-### 5. **Seguimiento Técnico (Admin)**
-- Asignación a grupos de trabajo.
-- Distribución equitativa entre técnicos.
-- Generación de órdenes de trabajo en PDF.
-
-### 6. **Cierre de Reclamos (Admin)**
-- Marcado de reclamos como resueltos.
-- Actualización de precintos.
-- Reasignación rápida de técnicos.
+- [Streamlit](https://streamlit.io/) — para la creación de la interfaz interactiva.
+- [Google Sheets](https://www.google.com/sheets/about/) — como base de datos en la nube.
+- [gspread](https://github.com/burnash/gspread) — para manipular hojas de cálculo de Google.
+- [ReportLab](https://www.reportlab.com/) — para generación de PDFs.
+- [Pandas](https://pandas.pydata.org/) — para manipulación eficiente de datos.
+- [Tenacity](https://tenacity.readthedocs.io/) — para manejo de reintentos automáticos.
+- [Streamlit-Lottie](https://github.com/andfanilo/streamlit-lottie) — para animaciones SVG.
 
 ---
 
-## 🌟 Beneficios Clave
+## ⚙️ Estructura general del sistema
 
-✅ **Reducción de tiempos** en gestión de reclamos  
-✅ **Seguimiento preciso** del estado de cada incidencia  
-✅ **Optimización** de recursos técnicos  
-✅ **Reportes profesionales** listos para imprimir  
-✅ **Acceso multi-dispositivo** (web + móvil)  
-✅ **Sin necesidad de servidores** (usa Google Sheets como backend)  
+- `app.py`: archivo principal que gestiona la autenticación, el enrutamiento, la interfaz y la carga de datos.
+- `components/`: contiene los módulos de cada sección funcional (reclamos, clientes, cierre, notificaciones, etc.).
+- `config/settings.py`: variables globales y nombres de hojas/configuraciones del sistema.
+- `utils/`: funciones auxiliares como manejo de fechas, generación de PDFs, estilos y APIs.
 
 ---
 
-## 🔧 Requisitos de Instalación
+## 🔐 Roles y autenticación
 
-1. Python 3.9+
-2. Librerías listadas en `requirements.txt`
-3. Credenciales de Google Service Account (en `st.secrets`)
-4. Acceso a una hoja de Google Sheets configurada con:
-   - 3 hojas: Reclamos, Clientes, Usuarios
-   - Columnas definidas en `config/settings.py`
+El sistema utiliza control de acceso basado en roles (`admin`, `operador`, etc.). Algunas funciones como la migración de UUIDs solo están disponibles para administradores.
 
 ---
 
-## 📜 Notas de Versión (2.0)
+## 💾 Persistencia de datos
 
-- **Mejoras en estabilidad**: Manejo robusto de errores en conexión con Sheets.
-- **Optimización de caché**: Recarga inteligente de datos.
-- **Nuevo sistema de permisos**: Más granularidad en accesos.
-- **Mejoras en PDFs**: Diseño profesional con pie de página.
-- **Soporte para zonas horarias**: Correcto manejo de fechas en Argentina.
+Toda la información se guarda automáticamente en hojas de cálculo de Google a través de la API de Google Sheets.
 
----
-
-## 🚧 Próximas Mejoras
-
-- Integración con WhatsApp para notificaciones
-- Panel de estadísticas históricas
-- Mapa interactivo de sectores
-- Soporte para imágenes en reclamos
+Los siguientes datos son gestionados:
+- Reclamos técnicos
+- Datos de clientes
+- Usuarios autorizados
+- Notificaciones internas
 
 ---
 
-**Desarrollado por** [Sebastian Andres]  
-📅 Julio 2025  
-📧 sebaxfusion@gmail.com
+## ✨ Detalles adicionales
+
+- 📱 **Adaptable a pantallas móviles**: el sistema detecta dispositivos móviles y cambia la navegación automáticamente.
+- 🔁 **Actualización automática de UUIDs**: permite generar identificadores únicos para reclamos/clientes sin ID.
+- 📥 **Caché optimizada y actualizaciones con `st.rerun()`**.
+- 🔔 **Campanita de notificaciones** en el sidebar para ver alertas internas.
+
+---
+
+## 🧑‍💻 Autor
+
+Hecho con amor por:  
+**[Sebastián Andrés](https://instagram.com/mellamansebax)** 💜
+
+---
+
+## 📌 Notas finales
+
+- Versión actual: `2.3.0`
+- Última actualización: `{{AUTO_TIMESTAMP}}`  
+- Proyecto en desarrollo interno, no distribuido públicamente.
+
+---
+
+## 📄 Licencia
+
+Este proyecto es de uso interno y no tiene licencia pública por el momento.
