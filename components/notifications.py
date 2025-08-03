@@ -145,32 +145,37 @@ class NotificationManager:
             return False
             
     def clear_old(self, days=30):
-    """
-    Limpia notificaciones antiguas
-    """
-    try:
-        df = safe_get_sheet_data(self.sheet, COLUMNAS_NOTIFICACIONES)
-        if df.empty:
-            return True
+        """
+        Limpia notificaciones antiguas
+        """
+        try:
+            df = safe_get_sheet_data(self.sheet, COLUMNAS_NOTIFICACIONES)
+            if df.empty:
+                return True
 
-        df['Fecha_Hora'] = pd.to_datetime(df['Fecha_Hora'], errors='coerce')
+            # Conversión robusta a datetime
+            df['Fecha_Hora'] = pd.to_datetime(df['Fecha_Hora'], errors='coerce')
 
-        # Eliminar NaT
-        df_validas = df[df['Fecha_Hora'].notna()].copy()
+            # Solo des-localizar si la columna tiene zona horaria
+            if pd.api.types.is_datetime64tz_dtype(df['Fecha_Hora']):
+                df['Fecha_Hora'] = df['Fecha_Hora'].dt.tz_convert(None)
 
-        # FIX: asegurar comparación naive
-        cutoff_date = ahora_argentina().replace(tzinfo=None) - timedelta(days=days)
+            # Eliminar NaT para evitar errores de comparación
+            df_validas = df[df['Fecha_Hora'].notna()].copy()
 
-        old_ids = df_validas[df_validas['Fecha_Hora'] < cutoff_date]['ID'].tolist()
+            # Comparación con corte
+            cutoff_date = pd.Timestamp(ahora_argentina()) - pd.Timedelta(days=days)
 
-        if not old_ids:
-            return True
+            old_ids = df_validas[df_validas['Fecha_Hora'] < cutoff_date]['ID'].tolist()
 
-        return self._delete_rows(old_ids)
+            if not old_ids:
+                return True
 
-    except Exception as e:
-        st.error(f"Error al limpiar notificaciones: {str(e)}")
-        return False
+            return self._delete_rows(old_ids)
+
+        except Exception as e:
+            st.error(f"Error al limpiar notificaciones: {str(e)}")
+            return False
 
             
     def _delete_rows(self, row_ids):
