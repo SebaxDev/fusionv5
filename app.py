@@ -160,6 +160,15 @@ with st.sidebar:
         <p style="margin:0;"><strong>Última actualización:</strong> {datetime.now().strftime("%d/%m/%Y %H:%M")}</p>
     </div>
     """, unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div style='text-align: center; margin-top: 20px; font-size: 0.9em; color: gray;'>
+        Hecho con amor por: 
+        <a href="https://instagram.com/mellamansebax" target="_blank" style="text-decoration: none; color: inherit; font-weight: bold;">
+            Sebastián Andrés
+        </a> 💜
+    </div>
+""", unsafe_allow_html=True)
 
 # --------------------------
 # INICIALIZACIÓN
