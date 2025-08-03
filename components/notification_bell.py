@@ -13,7 +13,7 @@ def render_notification_bell():
     if not user:
         return
         
-    notifications = st.session_state.notification_manager.get_for_user(user, unread_only=False)
+    notifications = st.session_state.notification_manager.get_for_user(user, unread_only=True)
     st.write("👤 DEBUG | Usuario:", user)
     st.write("🔍 DEBUG | Notificaciones obtenidas:", notifications)
     unread_count = len(notifications)

@@ -90,6 +90,7 @@ class NotificationManager:
 
             # ⚠️ FIX: Forzar parseo de fechas para evitar errores silenciosos al ordenar
             df['Fecha_Hora'] = pd.to_datetime(df['Fecha_Hora'], errors='coerce')
+            df['Leída'] = df['Leída'].astype(str).str.upper().map({'FALSE': False, 'TRUE': True}).fillna(False)
 
             mask = (df['Usuario_Destino'].isin([username, 'all']))
             if unread_only:
