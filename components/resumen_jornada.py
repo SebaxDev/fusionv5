@@ -13,7 +13,6 @@ from config.settings import NOTIFICATION_TYPES  # necesario para iconos
 def render_resumen_jornada(df_reclamos):
     """Muestra el resumen de la jornada en el footer (versión mejorada)"""
     st.markdown("---")
-    st.markdown('<div class="section-container">', unsafe_allow_html=True)
     st.markdown("### 📋 Resumen de la jornada")
 
     try:
@@ -83,7 +82,7 @@ def render_resumen_jornada(df_reclamos):
     except Exception as e:
         st.error(f"Error al generar resumen: {str(e)}")
     finally:
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown("---")
 
 
 def _notificar_reclamos_no_asignados(df):
