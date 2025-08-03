@@ -243,7 +243,6 @@ def init_google_sheets():
         st.error(f"Error de conexión: {str(e)}")
         st.stop()
 
-@st.cache_data(ttl=30, show_spinner=False)
 def precache_all_data(sheet_reclamos, sheet_clientes, sheet_usuarios, sheet_notifications):
     """Precarga silenciosa de datos para acelerar la app"""
     _ = safe_get_sheet_data(sheet_reclamos, COLUMNAS_RECLAMOS)
