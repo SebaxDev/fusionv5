@@ -6,37 +6,31 @@ import pandas as pd
 import streamlit as st
 from utils.api_manager import api_manager
 
-@st.cache_data(ttl=15)
+@st.cache_data(ttl=30)
 def safe_get_sheet_data(_sheet, columnas=None):
     """Carga datos de una hoja de forma segura"""
     try:
-        # Obtener todos los valores como lista de listas
         data, error = api_manager.safe_sheet_operation(_sheet.get_all_values)
         if error:
             st.error(f"Error al obtener datos: {error}")
-            return pd.DataFrame(columns=expected_columns)
+            return pd.DataFrame(columns=columnas)
         
-        # Si no hay datos, devolver DataFrame vacío con columnas esperadas
-        if len(data) <= 1:  # Solo encabezado o vacío
-            return pd.DataFrame(columns=expected_columns)
+        if len(data) <= 1:
+            return pd.DataFrame(columns=columnas)
         
-        # Crear DataFrame con los datos
         headers = data[0]
         rows = data[1:]
-        
-        # Crear DataFrame
         df = pd.DataFrame(rows, columns=headers)
-        
-        # Asegurar que tenemos todas las columnas esperadas
-        for col in expected_columns:
+
+        for col in columnas:
             if col not in df.columns:
-                df[col] = None  # Agregar columna faltante con valores nulos
+                df[col] = None
         
-        return df[expected_columns]  # Devolver solo las columnas esperadas en el orden correcto
-        
+        return df[columnas]
+    
     except Exception as e:
         st.error(f"Error crítico al cargar datos: {str(e)}")
-        return pd.DataFrame(columns=expected_columns)
+        return pd.DataFrame(columns=columnas)
 
 def safe_normalize(df, column):
     """Normaliza una columna de forma segura"""
