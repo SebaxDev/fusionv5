@@ -199,8 +199,9 @@ def init_notification_manager(sheet_notifications):
     """Inicializa el manager de notificaciones con estado persistente"""
     if 'notification_manager' not in st.session_state:
         st.session_state.notification_manager = NotificationManager(sheet_notifications)
-        
-        # Programar limpieza periódica (ejecutar solo una vez)
-        if st.session_state.get('clear_notifications_job') is None:
+
+        # Verificamos si el usuario ya inició sesión antes de limpiar
+        user = st.session_state.get('auth', {}).get('user_info', {}).get('username', '')
+        if user and st.session_state.get('clear_notifications_job') is None:
             if st.session_state.notification_manager.clear_old():
                 st.session_state.clear_notifications_job = True
