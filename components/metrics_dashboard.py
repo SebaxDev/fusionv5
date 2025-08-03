@@ -48,9 +48,6 @@ def render_metrics_dashboard(df_reclamos, is_mobile=False):
             with col4:
                 st.metric("✅ Resueltos", resueltos)
 
-        # Mostrar última actualización
-        st.caption(f"Última actualización: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
-
     except Exception as e:
         st.error(f"Error al mostrar métricas: {str(e)}")
         if st.session_state.get('DEBUG_MODE', False):
