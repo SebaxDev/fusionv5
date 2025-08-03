@@ -33,7 +33,6 @@ def render_nuevo_reclamo(df_reclamos, df_clientes, sheet_reclamos, sheet_cliente
             'cliente_nuevo': bool
         }
     """
-    st.markdown('<div class="section-container">', unsafe_allow_html=True)
     st.subheader("📝 Cargar nuevo reclamo")
 
     # Estado inicial
@@ -105,7 +104,6 @@ def render_nuevo_reclamo(df_reclamos, df_clientes, sheet_reclamos, sheet_cliente
     if not estado['formulario_bloqueado']:
         estado = _mostrar_formulario_reclamo(estado, df_clientes, sheet_reclamos, sheet_clientes, current_user)
 
-    st.markdown('</div>', unsafe_allow_html=True)
     return estado
 
 def _mostrar_formulario_reclamo(estado, df_clientes, sheet_reclamos, sheet_clientes, current_user):

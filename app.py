@@ -516,9 +516,9 @@ COMPONENTES = {
 # Renderizar componente seleccionado
 if opcion in COMPONENTES and has_permission(COMPONENTES[opcion]["permiso"]):
     with st.container():
-        st.markdown('<div class="section-container">', unsafe_allow_html=True)
+        st.markdown("---")
         resultado = COMPONENTES[opcion]["render"](**COMPONENTES[opcion]["params"])
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown("---")
         
         if resultado and resultado.get('needs_refresh'):
             st.cache_data.clear()
