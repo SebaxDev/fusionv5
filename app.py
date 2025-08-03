@@ -261,9 +261,6 @@ if not check_authentication():
     render_login(sheet_usuarios)
     st.stop()
 
-# Aquí ya estamos seguros de que el usuario está autenticado
-render_notification_bell()  # <--- colocá esto acá
-
 user_info = st.session_state.auth.get('user_info', {})
 user_role = user_info.get('rol', '')
 
