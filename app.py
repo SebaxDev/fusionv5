@@ -264,6 +264,9 @@ if not check_authentication():
 user_info = st.session_state.auth.get('user_info', {})
 user_role = user_info.get('rol', '')
 
+if 'notification_manager' not in st.session_state:
+    init_notification_manager(sheet_notifications)
+
 # --------------------------
 # CONFIGURACIÓN DE PÁGINA
 # --------------------------
@@ -312,6 +315,7 @@ with st.sidebar:
     st.write("DEBUG:", 'notification_manager' in st.session_state, st.session_state.get('auth', {}))
     # En el sidebar
     render_notification_bell()
+    st.write("DEBUG 2:", 'notification_manager' in st.session_state)
     
     st.markdown("---")
     render_user_widget()
