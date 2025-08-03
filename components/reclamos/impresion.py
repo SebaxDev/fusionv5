@@ -80,58 +80,6 @@ def render_impresion_reclamos(df_reclamos, df_clientes, user):
     
     return result
 
-def _generar_pdf_todos_pendientes(df_merged, usuario=None):
-    """Genera PDF con todos los reclamos pendientes, ordenados por tipo o sector"""
-    st.markdown("### 📋 Imprimir TODOS los reclamos pendientes")
-    
-    # Opciones de ordenamiento
-    orden = st.radio(
-        "Ordenar reclamos por:",
-        ["Tipo de reclamo", "Sector"],
-        horizontal=True,
-        key="orden_todos_pendientes"
-    )
-    
-    # Filtrar solo pendientes
-    df_pendientes = df_merged[
-        df_merged["Estado"].astype(str).str.strip().str.lower() == "pendiente"
-    ]
-    
-    if df_pendientes.empty:
-        st.info("✅ No hay reclamos pendientes para imprimir.")
-        return None
-    
-    # Ordenar según selección
-    if orden == "Tipo de reclamo":
-        df_pendientes = df_pendientes.sort_values("Tipo de reclamo")
-        titulo = "TODOS LOS RECLAMOS PENDIENTES (ORDENADOS POR TIPO)"
-    else:
-        df_pendientes = df_pendientes.sort_values("Sector")
-        titulo = "TODOS LOS RECLAMOS PENDIENTES (ORDENADOS POR SECTOR)"
-    
-    st.success(f"📋 Se encontraron {len(df_pendientes)} reclamos pendientes.")
-    
-    if st.button("📄 Generar PDF con TODOS los pendientes", key="pdf_todos_pendientes"):
-        buffer = _crear_pdf_reclamos(
-            df_pendientes, 
-            titulo,
-            usuario
-        )
-        
-        nombre_archivo = f"todos_reclamos_pendientes_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
-        
-        st.download_button(
-            label="⬇️ Descargar PDF con todos los pendientes",
-            data=buffer,
-            file_name=nombre_archivo,
-            mime="application/pdf",
-            help=f"Descargar {len(df_pendientes)} reclamos pendientes"
-        )
-        
-        return f"PDF generado con {len(df_pendientes)} reclamos pendientes (ordenados por {orden.lower()})"
-    
-    return None
-
 def _preparar_datos(df_reclamos, df_clientes, user):
     """Prepara y combina los datos para impresión incluyendo info de usuario"""
     df_pdf = df_reclamos.copy()
@@ -194,6 +142,58 @@ def _mostrar_reclamos_pendientes(df_merged):
             )
         else:
             st.success("✅ No hay reclamos pendientes actualmente.")
+
+def _generar_pdf_todos_pendientes(df_merged, usuario=None):
+    """Genera PDF con todos los reclamos pendientes, ordenados por tipo o sector"""
+    st.markdown("### 📋 Imprimir TODOS los reclamos pendientes")
+    
+    # Opciones de ordenamiento
+    orden = st.radio(
+        "Ordenar reclamos por:",
+        ["Tipo de reclamo", "Sector"],
+        horizontal=True,
+        key="orden_todos_pendientes"
+    )
+    
+    # Filtrar solo pendientes
+    df_pendientes = df_merged[
+        df_merged["Estado"].astype(str).str.strip().str.lower() == "pendiente"
+    ]
+    
+    if df_pendientes.empty:
+        st.info("✅ No hay reclamos pendientes para imprimir.")
+        return None
+    
+    # Ordenar según selección
+    if orden == "Tipo de reclamo":
+        df_pendientes = df_pendientes.sort_values("Tipo de reclamo")
+        titulo = "TODOS LOS RECLAMOS PENDIENTES (ORDENADOS POR TIPO)"
+    else:
+        df_pendientes = df_pendientes.sort_values("Sector")
+        titulo = "TODOS LOS RECLAMOS PENDIENTES (ORDENADOS POR SECTOR)"
+    
+    st.success(f"📋 Se encontraron {len(df_pendientes)} reclamos pendientes.")
+    
+    if st.button("📄 Generar PDF con TODOS los pendientes", key="pdf_todos_pendientes"):
+        buffer = _crear_pdf_reclamos(
+            df_pendientes, 
+            titulo,
+            usuario
+        )
+        
+        nombre_archivo = f"todos_reclamos_pendientes_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+        
+        st.download_button(
+            label="⬇️ Descargar PDF con todos los pendientes",
+            data=buffer,
+            file_name=nombre_archivo,
+            mime="application/pdf",
+            help=f"Descargar {len(df_pendientes)} reclamos pendientes"
+        )
+        
+        return f"PDF generado con {len(df_pendientes)} reclamos pendientes (ordenados por {orden.lower()})"
+    
+    return None
 
 def _generar_pdf_por_tipo(df_merged, solo_pendientes, usuario=None):
     """Genera PDF filtrado por tipos de reclamo"""
