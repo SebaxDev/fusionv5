@@ -107,6 +107,17 @@ def show_warning(message):
     st.warning(message)
 
 # --------------------------
+# AUTENTICACIÓN
+# --------------------------
+
+if not check_authentication():
+    render_login(sheet_usuarios)
+    st.stop()
+
+user_info = st.session_state.auth.get('user_info', {})
+user_role = user_info.get('rol', '')
+
+# --------------------------
 # CONFIGURACIÓN DE PÁGINA
 # --------------------------
 
@@ -238,17 +249,6 @@ try:
         st.stop()
 finally:
     loading_placeholder.empty()
-
-# --------------------------
-# AUTENTICACIÓN
-# --------------------------
-
-if not check_authentication():
-    render_login(sheet_usuarios)
-    st.stop()
-
-user_info = st.session_state.auth.get('user_info', {})
-user_role = user_info.get('rol', '')
 
 # --------------------------
 # CARGA DE DATOS OPTIMIZADA
