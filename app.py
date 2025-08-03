@@ -322,7 +322,7 @@ COMPONENTES = {
             "df_clientes": df_clientes,
             "sheet_reclamos": sheet_reclamos,
             "sheet_clientes": sheet_clientes,
-            "user": user_info
+            "current_user": user_info.get('nombre', '')
         }
     },
     "Reclamos cargados": {
