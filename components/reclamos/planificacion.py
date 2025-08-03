@@ -56,7 +56,6 @@ def render_planificacion_grupos(df_reclamos, sheet_reclamos, user):
         st.warning("⚠️ Solo los administradores pueden acceder a esta sección")
         return {'needs_refresh': False}
 
-    st.markdown('<div class="section-container">', unsafe_allow_html=True)
     st.subheader("📋 Asignación de reclamos a grupos de trabajo")
 
     try:

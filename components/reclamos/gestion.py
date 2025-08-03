@@ -29,7 +29,6 @@ def render_gestion_reclamos(df_reclamos, df_clientes, sheet_reclamos, user):
         'data_updated': False
     }
     
-    st.markdown('<div class="section-container">', unsafe_allow_html=True)
     st.subheader("📊 Gestión de reclamos cargados")
 
     try:

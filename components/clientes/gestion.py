@@ -19,7 +19,6 @@ def render_gestion_clientes(df_clientes, df_reclamos, sheet_clientes, user_role)
     Returns:
         bool: True si se realizaron cambios que requieren recarga
     """
-    st.markdown('<div class="section-container">', unsafe_allow_html=True)
     st.subheader("🛠️ Gestión de Clientes")
 
     # Normalización de datos
