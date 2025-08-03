@@ -248,7 +248,7 @@ def init_google_sheets():
 loading_placeholder = st.empty()
 loading_placeholder.markdown(get_loading_spinner(), unsafe_allow_html=True)
 try:
-    sheet_reclamos, sheet_clientes, sheet_usuarios, sheet_empresas, sheet_notifications = init_google_sheets()
+    sheet_reclamos, sheet_clientes, sheet_usuarios, sheet_notifications = init_google_sheets()
     if not all([sheet_reclamos, sheet_clientes, sheet_usuarios, sheet_empresas, sheet_notifications]):
         st.stop()
 finally:
