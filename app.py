@@ -28,7 +28,6 @@ from components.reclamos.impresion import render_impresion_reclamos
 from components.reclamos.planificacion import render_planificacion_grupos
 from components.reclamos.cierre import render_cierre_reclamos
 from components.resumen_jornada import render_resumen_jornada
-render_resumen_jornada(df_reclamos)
 
 from components.auth import has_permission, check_authentication, render_login
 from components.navigation import render_navigation
