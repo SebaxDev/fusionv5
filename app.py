@@ -518,7 +518,6 @@ if opcion in COMPONENTES and has_permission(COMPONENTES[opcion]["permiso"]):
     with st.container():
         st.markdown("---")
         resultado = COMPONENTES[opcion]["render"](**COMPONENTES[opcion]["params"])
-        st.markdown("---")
         
         if resultado and resultado.get('needs_refresh'):
             st.cache_data.clear()
@@ -528,7 +527,6 @@ if opcion in COMPONENTES and has_permission(COMPONENTES[opcion]["permiso"]):
 # --------------------------
 # RESUMEN DE JORNADA OPTIMIZADO
 # --------------------------
-st.markdown("---")
 with st.container():
     render_resumen_jornada(df_reclamos)
     st.markdown('</div>', unsafe_allow_html=True)
