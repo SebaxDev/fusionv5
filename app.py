@@ -67,6 +67,39 @@ def generar_id_unico():
     import uuid
     return str(uuid.uuid4())[:8].upper()
 
+def is_system_dark_mode():
+    """Intenta detectar si el sistema está en modo oscuro"""
+    try:
+        import streamlit as st
+        from streamlit.runtime.scriptrunner import get_script_run_ctx
+        
+        ctx = get_script_run_ctx()
+        if ctx is None:
+            return False
+            
+        # Esto es una aproximación - Streamlit no expone directamente esta información
+        # Puedes cambiarlo por una preferencia del usuario guardada en session_state
+        return st.session_state.get('modo_oscuro', False)
+    except:
+        return False
+
+def is_mobile():
+    """Detecta si la aplicación se está ejecutando en un dispositivo móvil"""
+    # Puedes usar la biblioteca streamlit para detectar el user agent
+    from streamlit import runtime
+    from streamlit.runtime.scriptrunner import get_script_run_ctx
+    
+    try:
+        ctx = get_script_run_ctx()
+        if ctx is None:
+            return False
+            
+        user_agent = ctx.request.headers.get("User-Agent", "").lower()
+        mobile_keywords = ['mobi', 'android', 'iphone', 'ipad', 'ipod', 'blackberry', 'windows phone']
+        return any(keyword in user_agent for keyword in mobile_keywords)
+    except:
+        return False
+
 def migrar_uuids_existentes():
     """Genera UUIDs para registros existentes que no los tengan"""
     try:
