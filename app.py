@@ -342,7 +342,7 @@ COMPONENTES = {
             "df_clientes": df_clientes,
             "df_reclamos": df_reclamos,
             "sheet_clientes": sheet_clientes,
-            "user": user_info
+            "user_role": user_info.get('rol', '')
         }
     },
     "Imprimir reclamos": {
@@ -351,7 +351,7 @@ COMPONENTES = {
         "params": {
             "df_clientes": df_clientes,
             "df_reclamos": df_reclamos,
-            "current_user": user_info.get('nombre', '')
+            "user": user_info
         }
     },
     "Seguimiento técnico": {
