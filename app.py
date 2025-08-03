@@ -100,7 +100,7 @@ def is_mobile():
     except:
         return False
 
-def migrar_uuids_existentes():
+def migrar_uuids_existentes(sheet_reclamos, sheet_clientes):
     """Genera UUIDs para registros existentes que no los tengan"""
     try:
         if not sheet_reclamos or not sheet_clientes:
