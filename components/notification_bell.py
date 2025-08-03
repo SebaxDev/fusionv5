@@ -3,7 +3,7 @@
 import streamlit as st
 from utils.date_utils import format_fecha
 from config.settings import NOTIFICATION_TYPES
-from notifications import get_cached_notifications
+from components.notifications import get_cached_notifications
 
 def render_notification_bell():
     """Muestra el ícono de notificaciones y el panel"""
