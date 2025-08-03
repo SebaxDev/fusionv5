@@ -1,9 +1,10 @@
 """
 Módulo para gestión segura de datos con Google Sheets
-Versión 3.1 - Con manejo robusto de errores y compatibilidad con API
+Versión 3.2 - Con manejo robusto de errores y compatibilidad con API
 """
 import streamlit as st
 import time
+from typing import List, Dict, Union, Optional
 
 class ApiManager:
     def __init__(self):
@@ -42,6 +43,28 @@ class ApiManager:
             "error_count": self.error_count,
             "last_call": self.last_call
         }
+
+def batch_update_sheet(worksheet, updates: List[Dict[str, Union[str, List[List[str]]]]]) -> bool:
+    """
+    Realiza actualizaciones por lotes en una hoja de cálculo
+    
+    Args:
+        worksheet: objeto de hoja de cálculo de gspread
+        updates: lista de diccionarios con formato:
+            [{"range": "A1:B2", "values": [["val1", "val2"], ["val3", "val4"]]}]
+    
+    Returns:
+        bool: True si la operación fue exitosa
+    """
+    if not updates:
+        return True
+        
+    try:
+        worksheet.batch_update(updates)
+        return True
+    except Exception as e:
+        st.error(f"Error en batch_update: {str(e)}")
+        return False
 
 # Instancia única global
 api_manager = ApiManager()
