@@ -102,7 +102,7 @@ def _mostrar_reasignacion_tecnico(df_reclamos, sheet_reclamos):
         return False
 
     reclamos_filtrados = df_reclamos[
-        (df_reclamos["Nº Cliente"] == cliente_busqueda) &
+        (df_reclamos["Nº Cliente"] == cliente_busqueda) & 
         (df_reclamos["Estado"].isin(["Pendiente", "En curso"]))
     ]
 
@@ -118,6 +118,7 @@ def _mostrar_reasignacion_tecnico(df_reclamos, sheet_reclamos):
 
     tecnicos_actuales_raw = [t.strip().lower() for t in reclamo["Técnico"].split(",") if t.strip()]
     tecnicos_actuales = [tecnico for tecnico in TECNICOS_DISPONIBLES if tecnico.lower() in tecnicos_actuales_raw]
+
     nuevo_tecnico_multiselect = st.multiselect(
         "👷 Nuevo técnico asignado",
         options=TECNICOS_DISPONIBLES,
@@ -133,16 +134,26 @@ def _mostrar_reasignacion_tecnico(df_reclamos, sheet_reclamos):
                 updates = [{"range": f"J{fila_index}", "values": [[nuevo_tecnico]]}]
                 if reclamo['Estado'] == "Pendiente":
                     updates.append({"range": f"I{fila_index}", "values": [["En curso"]]})
-                
+
                 success, error = api_manager.safe_sheet_operation(
                     batch_update_sheet,
                     sheet_reclamos,
                     updates,
                     is_batch=True
                 )
-                
+
                 if success:
                     st.success("✅ Técnico actualizado correctamente.")
+                    
+                    # Agregar notificación
+                    if 'notification_manager' in st.session_state and nuevo_tecnico:
+                        mensaje = f"📌 El cliente N° {reclamo['Nº Cliente']} fue asignado al técnico {nuevo_tecnico}."
+                        st.session_state.notification_manager.add(
+                            notification_type="reclamo_asignado",
+                            message=mensaje,
+                            user_target="all",
+                            claim_id=reclamo["ID Reclamo"]
+                        )
                     return True
                 else:
                     st.error(f"❌ Error al actualizar: {error}")
@@ -152,7 +163,7 @@ def _mostrar_reasignacion_tecnico(df_reclamos, sheet_reclamos):
                 st.error(f"❌ Error inesperado: {str(e)}")
                 if DEBUG_MODE:
                     st.exception(e)
-    
+
     return False
 
 def _mostrar_reclamos_en_curso(df_reclamos, df_clientes, sheet_reclamos, sheet_clientes):

@@ -10,6 +10,25 @@ SHEET_ID = "13R_3Mdr25Jd-nGhK7CxdcbKkFWLc0LPdYrOLOY8sZJo"
 WORKSHEET_RECLAMOS = "Reclamos"
 WORKSHEET_CLIENTES = "Clientes"
 WORKSHEET_USUARIOS = "usuarios"
+WORKSHEET_NOTIFICACIONES = "Notificaciones"
+
+MAX_NOTIFICATIONS = 10  # Máximo de notificaciones a mostrar en UI
+
+# Tipos de notificación
+NOTIFICATION_TYPES = {
+    'unassigned_claim': {'priority': 'alta', 'icon': '⏱️'},
+    'status_change': {'priority': 'media', 'icon': '🔄'},
+    'duplicate_claim': {'priority': 'alta', 'icon': '⚠️'},
+    'new_assignment': {'priority': 'media', 'icon': '📌'},
+    'client_update': {'priority': 'baja', 'icon': '✏️'},
+    'daily_reminder': {'priority': 'baja', 'icon': '📅'}
+}
+
+# Columnas para la hoja de notificaciones
+COLUMNAS_NOTIFICACIONES = [
+    "ID", "Tipo", "Prioridad", "Mensaje", 
+    "Usuario_Destino", "ID_Reclamo", "Fecha_Hora", "Leída", "Acción"
+]
 
 # --------------------------
 # ESTRUCTURAS DE DATOS

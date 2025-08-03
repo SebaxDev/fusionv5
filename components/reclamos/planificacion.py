@@ -316,19 +316,27 @@ def _guardar_cambios(df_reclamos, sheet_reclamos, grupos_activos):
 
     with st.spinner("Actualizando reclamos..."):
         updates = []
+        notificaciones = []  # Lista de notificaciones por grupo
+
         for grupo in ["Grupo A", "Grupo B", "Grupo C", "Grupo D"][:grupos_activos]:
             tecnicos = st.session_state.tecnicos_grupos[grupo]
+            reclamos_ids = st.session_state.asignaciones_grupos[grupo]
             tecnicos_str = ", ".join(tecnicos).upper() if tecnicos else ""
-            
-            for reclamo_id in st.session_state.asignaciones_grupos[grupo]:
-                fila = df_reclamos[df_reclamos["ID Reclamo"] == reclamo_id]
-                
-                if not fila.empty:
-                    index = fila.index[0] + 2
-                    updates.append({"range": f"I{index}", "values": [["En curso"]]})
-                    updates.append({"range": f"J{index}", "values": [[tecnicos_str]]})
-                else:
-                    st.warning(f"⚠️ Reclamo con ID {reclamo_id} no encontrado en la hoja.")
+
+            if reclamos_ids:
+                for reclamo_id in reclamos_ids:
+                    fila = df_reclamos[df_reclamos["ID Reclamo"] == reclamo_id]
+                    if not fila.empty:
+                        index = fila.index[0] + 2
+                        updates.append({"range": f"I{index}", "values": [["En curso"]]})
+                        updates.append({"range": f"J{index}", "values": [[tecnicos_str]]})
+
+                # Guardar mensaje para este grupo
+                notificaciones.append({
+                    "grupo": grupo,
+                    "tecnicos": tecnicos_str,
+                    "cantidad": len(reclamos_ids)
+                })
 
         if updates:
             success, error = api_manager.safe_sheet_operation(
@@ -337,13 +345,23 @@ def _guardar_cambios(df_reclamos, sheet_reclamos, grupos_activos):
                 updates, 
                 is_batch=True
             )
-            
+
             if success:
                 st.success("✅ Reclamos actualizados correctamente en la hoja.")
+
+                # Enviar notificaciones por grupo
+                if 'notification_manager' in st.session_state:
+                    for n in notificaciones:
+                        mensaje = f"📋 Se asignaron {n['cantidad']} reclamos a {n['grupo']} (Técnicos: {n['tecnicos']})."
+                        st.session_state.notification_manager.add(
+                            notification_type="reclamo_asignado",
+                            message=mensaje,
+                            user_target="all"
+                        )
                 return True
             else:
                 st.error("❌ Error al actualizar: " + str(error))
-    
+
     return False
 
 def _generar_pdf_asignaciones(grupos_activos, materiales_por_grupo, df_pendientes):

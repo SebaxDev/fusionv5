@@ -73,6 +73,26 @@ def render_nuevo_reclamo(df_reclamos, df_clientes, sheet_reclamos, sheet_cliente
             estado['formulario_bloqueado'] = True
             st.error("⚠️ Este cliente ya tiene un reclamo sin resolver o una desconexión activa. No se puede cargar uno nuevo.")
 
+            # 🔔 Notificación por intento de duplicado
+            if 'notification_manager' in st.session_state:
+                ya_notificado = any(
+                    reclamo_activo.get("ID Reclamo") in [
+                        n.get("ID_Reclamo") for n in st.session_state.notification_manager.get_for_user("admin", unread_only=False, limit=1000)
+                        if n.get("Tipo") == "duplicate_claim"
+                    ]
+                    for _, reclamo_activo in reclamos_activos.iterrows()
+                )
+
+                if not ya_notificado:
+                    mensaje = f"Intento de reclamo duplicado para el cliente {estado['nro_cliente']}"
+                    primer_reclamo = reclamos_activos.iloc[0]
+                    st.session_state.notification_manager.add(
+                        notification_type="duplicate_claim",
+                        message=mensaje,
+                        user_target="admin",
+                        claim_id=primer_reclamo.get("ID Reclamo", "")
+                    )
+
             for _, reclamo in reclamos_activos.iterrows():
                 with st.expander(f"🔍 Ver reclamo activo - {format_fecha(reclamo['Fecha y hora'], '%d/%m/%Y %H:%M')}"):
                     st.markdown(f"**👤 Cliente:** {reclamo['Nombre']}")
@@ -191,6 +211,16 @@ def _procesar_envio_formulario(estado, nombre, direccion, telefono, sector, tipo
                 if success:
                     estado['reclamo_guardado'] = True
                     st.success(f"✅ Reclamo cargado para el cliente {estado['nro_cliente']} - {tipo_reclamo.upper()}")
+
+                    # 🔔 Notificación por nuevo reclamo
+                    if 'notification_manager' in st.session_state:
+                        mensaje = f"📝 Se generó un nuevo reclamo para el cliente N° {estado['nro_cliente']} - {nombre.upper()} ({tipo_reclamo})."
+                        st.session_state.notification_manager.add(
+                            notification_type="nuevo_reclamo",
+                            message=mensaje,
+                            user_target="all",
+                            claim_id=id_reclamo
+                        )
 
                     if tipo_reclamo.strip().lower() == "desconexion a pedido":
                         st.warning("📄 Este reclamo es una Desconexión a Pedido. **Y NO CUENTA como reclamo activo.**")

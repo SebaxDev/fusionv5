@@ -20,6 +20,26 @@ from reportlab.pdfgen import canvas
 from streamlit_lottie import st_lottie
 from tenacity import retry, wait_exponential, stop_after_attempt
 
+# Config
+from config.settings import (
+    SHEET_ID,
+    WORKSHEET_RECLAMOS,
+    WORKSHEET_CLIENTES, 
+    WORKSHEET_USUARIOS,
+    COLUMNAS_RECLAMOS,
+    COLUMNAS_CLIENTES,
+    COLUMNAS_USUARIOS,
+    WORKSHEET_NOTIFICACIONES,
+    NOTIFICATION_TYPES,
+    COLUMNAS_NOTIFICACIONES,
+    SECTORES_DISPONIBLES,
+    TIPOS_RECLAMO,
+    TECNICOS_DISPONIBLES,
+    MATERIALES_POR_RECLAMO,
+    ROUTER_POR_SECTOR,
+    DEBUG_MODE
+)
+
 # Local components
 from components.reclamos.nuevo import render_nuevo_reclamo
 from components.reclamos.gestion import render_gestion_reclamos
@@ -28,6 +48,8 @@ from components.reclamos.impresion import render_impresion_reclamos
 from components.reclamos.planificacion import render_planificacion_grupos
 from components.reclamos.cierre import render_cierre_reclamos
 from components.resumen_jornada import render_resumen_jornada
+from components.notifications import init_notification_manager
+from components.notification_bell import render_notification_bell
 
 from components.auth import has_permission, check_authentication, render_login
 from components.navigation import render_navigation
@@ -40,23 +62,6 @@ from utils.data_manager import safe_get_sheet_data, safe_normalize, update_sheet
 from utils.api_manager import api_manager, init_api_session_state
 from utils.pdf_utils import agregar_pie_pdf
 from utils.date_utils import parse_fecha, es_fecha_valida, format_fecha, ahora_argentina
-
-# Config
-from config.settings import (
-    SHEET_ID,
-    WORKSHEET_RECLAMOS,
-    WORKSHEET_CLIENTES, 
-    WORKSHEET_USUARIOS,
-    COLUMNAS_RECLAMOS,
-    COLUMNAS_CLIENTES,
-    COLUMNAS_USUARIOS,
-    SECTORES_DISPONIBLES,
-    TIPOS_RECLAMO,
-    TECNICOS_DISPONIBLES,
-    MATERIALES_POR_RECLAMO,
-    ROUTER_POR_SECTOR,
-    DEBUG_MODE
-)
 
 # --------------------------
 # FUNCIONES AUXILIARES OPTIMIZADAS
@@ -222,10 +227,15 @@ def init_google_sheets():
             scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
         )
         client = gspread.authorize(creds)
+        sheet_notifications = client.open_by_key(SHEET_ID).worksheet(WORKSHEET_NOTIFICACIONES)
+        init_notification_manager(sheet_notifications)  # Inicializamos el gestor de notificaciones
+        
         return (
             client.open_by_key(SHEET_ID).worksheet(WORKSHEET_RECLAMOS),
             client.open_by_key(SHEET_ID).worksheet(WORKSHEET_CLIENTES),
-            client.open_by_key(SHEET_ID).worksheet(WORKSHEET_USUARIOS)
+            client.open_by_key(SHEET_ID).worksheet(WORKSHEET_USUARIOS),
+            client.open_by_key(SHEET_ID).worksheet(WORKSHEET_EMPRESAS),
+            sheet_notifications  # Retornamos también la hoja de notificaciones
         )
     
     try:
@@ -238,8 +248,8 @@ def init_google_sheets():
 loading_placeholder = st.empty()
 loading_placeholder.markdown(get_loading_spinner(), unsafe_allow_html=True)
 try:
-    sheet_reclamos, sheet_clientes, sheet_usuarios = init_google_sheets()
-    if not all([sheet_reclamos, sheet_clientes, sheet_usuarios]):
+    sheet_reclamos, sheet_clientes, sheet_usuarios, sheet_empresas, sheet_notifications = init_google_sheets()
+    if not all([sheet_reclamos, sheet_clientes, sheet_usuarios, sheet_empresas, sheet_notifications]):
         st.stop()
 finally:
     loading_placeholder.empty()
@@ -302,6 +312,9 @@ with st.sidebar:
     
     st.markdown("---")
     render_user_widget()
+    
+    # En el sidebar
+    render_notification_bell()
     
     # Herramientas de administrador (solo visible para admins)
     if user_role == 'admin':

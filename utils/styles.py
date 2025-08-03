@@ -1,9 +1,9 @@
 """
-Estilos CSS optimizados - Versión Mejorada con márgenes y diseño refinado
+Estilos CSS refinados para diseño más profesional y compacto
 """
 
 def get_main_styles(dark_mode=False):
-    """Devuelve estilos CSS con márgenes y diseño mejorado"""
+    """Devuelve estilos CSS refinados y más compactos"""
     theme_vars = """
         --primary-color: #4361ee;
         --secondary-color: #7209b7;
@@ -12,7 +12,7 @@ def get_main_styles(dark_mode=False):
         --bg-color: #f8f9fa;
         --card-bg: #ffffff;
         --border-color: #e9ecef;
-        --shadow: 0 2px 8px rgba(0,0,0,0.1);
+        --shadow: 0 2px 8px rgba(0,0,0,0.08);
     """ if not dark_mode else """
         --primary-color: #4895ef;
         --secondary-color: #b5179e;
@@ -28,12 +28,12 @@ def get_main_styles(dark_mode=False):
     <style>
     :root {{
         {theme_vars}
-        --border-radius: 10px;
-        --side-margin: 5%;
-        --top-margin: 2rem;
+        --border-radius: 8px;
+        --side-margin: 3%;
+        --top-margin: 1.5rem;
     }}
 
-    /* Estructura principal */
+    /* Contenedor principal */
     body, .block-container {{
         font-family: 'Segoe UI', Roboto, -apple-system, sans-serif;
         background-color: var(--bg-color);
@@ -44,26 +44,26 @@ def get_main_styles(dark_mode=False):
     }}
 
     .block-container {{
-        max-width: 90%;
-        margin: var(--top-margin) var(--side-margin);
-        padding: 0;
+        max-width: 850px;
+        margin: var(--top-margin) auto;
+        padding: 0 10px;
     }}
 
-    /* Encabezados */
+    /* Títulos */
     h1, h2, h3, h4, h5, h6 {{
         color: var(--primary-color);
-        margin-top: 1.5rem;
-        margin-bottom: 1rem;
+        margin-top: 1.2rem;
+        margin-bottom: 0.8rem;
     }}
 
-    /* Componentes de formulario */
+    /* Formularios */
     .stTextInput input, 
     .stTextArea textarea, 
     .stSelectbox select,
     .stDateInput input {{
         border-radius: var(--border-radius);
         border: 1px solid var(--border-color);
-        padding: 10px 14px;
+        padding: 8px 12px;
         background-color: var(--card-bg);
         color: var(--text-color);
         transition: all 0.2s ease;
@@ -73,7 +73,7 @@ def get_main_styles(dark_mode=False):
     .stTextArea textarea:focus, 
     .stSelectbox select:focus {{
         border-color: var(--primary-color);
-        box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.2);
+        box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.15);
         outline: none;
     }}
 
@@ -82,10 +82,11 @@ def get_main_styles(dark_mode=False):
         border-radius: var(--border-radius);
         background-color: var(--primary-color);
         color: white;
-        padding: 10px 20px;
+        padding: 8px 16px;
         border: none;
         font-weight: 500;
         transition: all 0.2s ease;
+        cursor: pointer;
     }}
 
     .stButton>button:hover {{
@@ -94,12 +95,12 @@ def get_main_styles(dark_mode=False):
         box-shadow: var(--shadow);
     }}
 
-    /* Tarjetas y contenedores */
+    /* Secciones y tarjetas */
     .section-container {{
         background: var(--card-bg);
         border-radius: var(--border-radius);
-        padding: 20px;
-        margin: 20px 0;
+        padding: 16px 20px;
+        margin: 16px 0;
         border: 1px solid var(--border-color);
         box-shadow: var(--shadow);
     }}
@@ -110,6 +111,7 @@ def get_main_styles(dark_mode=False):
         border: 1px solid var(--border-color);
         box-shadow: var(--shadow);
         overflow: hidden;
+        margin-bottom: 1rem;
     }}
 
     .dataframe thead th {{
@@ -118,18 +120,18 @@ def get_main_styles(dark_mode=False):
         font-weight: 600;
     }}
 
-    /* Barra lateral */
+    /* Sidebar */
     .css-1d391kg {{
-        padding: 1.5rem;
+        padding: 1.2rem;
         background-color: var(--card-bg) !important;
         border-right: 1px solid var(--border-color);
     }}
 
-    /* Efectos hover para elementos interactivos */
+    /* Hover general */
     .element-container:has(button):hover,
     .stCheckbox:hover,
     .stRadio:hover {{
-        transform: translateY(-2px);
+        transform: translateY(-1px);
         transition: all 0.2s ease;
     }}
 
@@ -143,16 +145,16 @@ def get_main_styles(dark_mode=False):
         .block-container {{
             max-width: 96%;
         }}
-        
+
         .section-container {{
-            padding: 15px;
+            padding: 14px 16px;
         }}
     }}
     </style>
     """
 
 def get_loading_spinner():
-    """Spinner mejorado con diseño más moderno"""
+    """Spinner moderno y elegante"""
     return """
     <div style="
         position: fixed;
@@ -163,7 +165,7 @@ def get_loading_spinner():
         display: flex;
         justify-content: center;
         align-items: center;
-        background-color: rgba(0,0,0,0.5);
+        background-color: rgba(0,0,0,0.4);
         z-index: 9999;
         backdrop-filter: blur(2px);
     ">

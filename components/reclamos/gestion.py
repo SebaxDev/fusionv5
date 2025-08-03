@@ -340,12 +340,15 @@ def _mostrar_edicion_reclamo(df, sheet_reclamos):
     return False
 
 def _actualizar_reclamo(df, sheet_reclamos, reclamo_id, updates, full_update=False):
-    """Actualiza el reclamo en la hoja de cálculo"""
+    """Actualiza el reclamo en la hoja de cálculo y genera notificaciones si corresponde"""
+    from config.settings import NOTIFICATION_TYPES  # Para íconos (opcional)
+    
     with st.spinner("Actualizando reclamo..."):
         try:
             fila = df[df["ID Reclamo"] == reclamo_id].index[0] + 2
             updates_list = []
-            
+            estado_anterior = df[df["ID Reclamo"] == reclamo_id]["Estado"].values[0]
+
             if full_update:
                 updates_list.extend([
                     {"range": f"D{fila}", "values": [[updates['direccion']]]},
@@ -355,9 +358,9 @@ def _actualizar_reclamo(df, sheet_reclamos, reclamo_id, updates, full_update=Fal
                     {"range": f"K{fila}", "values": [[updates['precinto']]]},
                     {"range": f"C{fila}", "values": [[str(updates['sector'])]]},
                 ])
-            
+
             updates_list.append({"range": f"I{fila}", "values": [[updates['estado']]]})
-            
+
             if updates['estado'] == "Pendiente":
                 updates_list.append({"range": f"J{fila}", "values": [[""]]})
 
@@ -367,9 +370,21 @@ def _actualizar_reclamo(df, sheet_reclamos, reclamo_id, updates, full_update=Fal
                 updates_list, 
                 is_batch=True
             )
-            
+
             if success:
                 st.success("✅ Reclamo actualizado correctamente.")
+
+                # Crear notificación si cambió el estado
+                if updates['estado'] != estado_anterior and 'notification_manager' in st.session_state:
+                    mensaje = f"El reclamo {reclamo_id} cambió de estado: {estado_anterior} ➜ {updates['estado']}"
+                    usuario = st.session_state.auth.get('user_info', {}).get('username', 'desconocido')
+                    st.session_state.notification_manager.add(
+                        notification_type="status_change",
+                        message=mensaje,
+                        user_target="all",
+                        claim_id=reclamo_id
+                    )
+
                 return True
             else:
                 st.error(f"❌ Error al actualizar: {error}")
