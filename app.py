@@ -67,44 +67,113 @@ def generar_id_unico():
     import uuid
     return str(uuid.uuid4())[:8].upper()
 
-def is_mobile():
-    """Detecta si el dispositivo es móvil"""
-    user_agent = st.query_params.get("user_agent", [""])[0]
-    mobile_keywords = ['iphone', 'android', 'mobile', 'ipad', 'tablet']
-    return any(keyword in user_agent.lower() for keyword in mobile_keywords)
+def migrar_uuids_existentes():
+    """Genera UUIDs para registros existentes que no los tengan"""
+    try:
+        if not sheet_reclamos or not sheet_clientes:
+            st.error("No se pudo conectar a las hojas de cálculo")
+            return False
 
-def is_system_dark_mode():
-    """Detecta el modo oscuro del sistema"""
-    import platform
-    if platform.system() == "Windows":
-        import winreg
-        try:
-            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize")
-            value = winreg.QueryValueEx(key, "AppsUseLightTheme")[0]
-            return value == 0
-        except:
+        updates_reclamos = []
+        updates_clientes = []
+        
+        # Para Reclamos
+        if 'ID Reclamo' not in st.session_state.df_reclamos.columns:
+            st.error("La columna 'ID Reclamo' no existe en los datos de reclamos")
             return False
-    elif platform.system() == "Darwin":
-        import subprocess
-        try:
-            result = subprocess.run(['defaults', 'read', '-g', 'AppleInterfaceStyle'], capture_output=True, text=True)
-            return "Dark" in result.stdout
-        except:
+            
+        reclamos_sin_uuid = st.session_state.df_reclamos[
+            st.session_state.df_reclamos['ID Reclamo'].isna() | 
+            (st.session_state.df_reclamos['ID Reclamo'] == '')
+        ]
+        
+        if not reclamos_sin_uuid.empty:
+            with st.status("Generando UUIDs para reclamos...", expanded=True) as status:
+                st.write(f"📋 {len(reclamos_sin_uuid)} reclamos sin UUID encontrados")
+                
+                for _, row in reclamos_sin_uuid.iterrows():
+                    nuevo_uuid = generar_id_unico()
+                    updates_reclamos.append({
+                        "range": f"P{row.name + 2}",  # Usando row.name para precisión
+                        "values": [[nuevo_uuid]]
+                    })
+                
+                batch_size = 50
+                total_batches = (len(updates_reclamos) // batch_size) + 1
+                
+                for i in range(0, len(updates_reclamos), batch_size):
+                    batch = updates_reclamos[i:i + batch_size]
+                    progress = min((i + batch_size) / len(updates_reclamos), 1.0)
+                    status.update(label=f"Actualizando reclamos... {progress:.0%}", state="running")
+                    
+                    success, error = api_manager.safe_sheet_operation(
+                        batch_update_sheet,
+                        sheet_reclamos,
+                        batch,
+                        is_batch=True
+                    )
+                    if not success:
+                        st.error(f"Error al actualizar lote de reclamos: {error}")
+                        return False
+                
+                status.update(label="✅ UUIDs para reclamos completados", state="complete", expanded=False)
+
+        # Para Clientes
+        if 'ID Cliente' not in st.session_state.df_clientes.columns:
+            st.error("La columna 'ID Cliente' no existe en los datos de clientes")
             return False
-    else:
+            
+        clientes_sin_uuid = st.session_state.df_clientes[
+            st.session_state.df_clientes['ID Cliente'].isna() | 
+            (st.session_state.df_clientes['ID Cliente'] == '')
+        ]
+        
+        if not clientes_sin_uuid.empty:
+            with st.status("Generando UUIDs para clientes...", expanded=True) as status:
+                st.write(f"👥 {len(clientes_sin_uuid)} clientes sin UUID encontrados")
+                
+                for _, row in clientes_sin_uuid.iterrows():
+                    nuevo_uuid = generar_id_unico()
+                    updates_clientes.append({
+                        "range": f"G{row.name + 2}",  # Usando row.name para precisión
+                        "values": [[nuevo_uuid]]
+                    })
+                
+                batch_size = 50
+                total_batches = (len(updates_clientes) // batch_size) + 1
+                
+                for i in range(0, len(updates_clientes), batch_size):
+                    batch = updates_clientes[i:i + batch_size]
+                    progress = min((i + batch_size) / len(updates_clientes), 1.0)
+                    status.update(label=f"Actualizando clientes... {progress:.0%}", state="running")
+                    
+                    success, error = api_manager.safe_sheet_operation(
+                        batch_update_sheet,
+                        sheet_clientes,
+                        batch,
+                        is_batch=True
+                    )
+                    if not success:
+                        st.error(f"Error al actualizar lote de clientes: {error}")
+                        return False
+                
+                status.update(label="✅ UUIDs para clientes completados", state="complete", expanded=False)
+
+        if not updates_reclamos and not updates_clientes:
+            st.info("ℹ️ Todos los registros ya tienen UUIDs asignados")
+            return False
+
+        # Actualizar los DataFrames en caché
+        st.session_state.df_reclamos = safe_get_sheet_data(sheet_reclamos, COLUMNAS_RECLAMOS)
+        st.session_state.df_clientes = safe_get_sheet_data(sheet_clientes, COLUMNAS_CLIENTES)
+        
+        return True
+
+    except Exception as e:
+        st.error(f"❌ Error en la migración de UUIDs: {str(e)}")
+        if DEBUG_MODE:
+            st.exception(e)
         return False
-
-def show_error(message):
-    """Muestra un mensaje de error optimizado"""
-    st.error(message)
-
-def show_success(message):
-    """Muestra un mensaje de éxito optimizado"""
-    st.success(message)
-
-def show_warning(message):
-    """Muestra un mensaje de advertencia optimizado"""
-    st.warning(message)
 
 # --------------------------
 # AUTENTICACIÓN
@@ -170,9 +239,13 @@ with st.sidebar:
         st.markdown("---")
         st.markdown("**🔧 Herramientas Admin**")
         if st.button("🆔 Generar UUIDs para registros", 
-                    help="Genera IDs únicos para registros existentes que no los tengan"):
-            if migrar_uuids_existentes():
-                st.rerun()
+                    help="Genera IDs únicos para registros existentes que no los tengan",
+                    disabled=st.session_state.get('uuid_migration_in_progress', False)):
+            st.session_state.uuid_migration_in_progress = True
+            with st.spinner("Migrando UUIDs..."):
+                if migrar_uuids_existentes():
+                    st.rerun()
+            st.session_state.uuid_migration_in_progress = False
     
     st.markdown(f"""
     <div style="margin-top: 20px;">
@@ -205,7 +278,8 @@ class AppState:
             'df_reclamos': pd.DataFrame(),
             'df_clientes': pd.DataFrame(),
             'last_update': None,
-            'modo_oscuro': is_system_dark_mode()
+            'modo_oscuro': is_system_dark_mode(),
+            'uuid_migration_in_progress': False
         }
         
         for key, value in defaults.items():
