@@ -1,7 +1,7 @@
 import streamlit as st
 from components.auth import logout, check_authentication
 
-def show_user_widget():
+def render_user_widget():
     """Widget de usuario simplificado sin botón HTML"""
     if not check_authentication():
         return

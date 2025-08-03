@@ -1,3 +1,6 @@
+# utils/pdf_utils.py
+from reportlab.lib.pagesizes import A4
+
 def agregar_pie_pdf(c, width, height):
     """Agrega marca de agua/pie institucional al PDF"""
     c.setFont("Courier-Bold", 10)
