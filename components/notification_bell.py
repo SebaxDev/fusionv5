@@ -14,7 +14,7 @@ def render_notification_bell():
     if not user:
         return
         
-    notifications = get_cached_notifications(st.session_state.notification_manager.sheet, user)
+    notifications = get_cached_notifications(user)
     
     unread_count = len(notifications)
     
