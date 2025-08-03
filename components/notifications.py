@@ -31,25 +31,39 @@ class NotificationManager:
         
     def add(self, notification_type, message, user_target='all', claim_id=None, action=None):
         """
-        Agrega una nueva notificación con validación de tipos
-        
-        Args:
-            notification_type (str): Tipo de notificación definido en settings
-            message (str): Mensaje descriptivo
-            user_target (str): Usuario destino o 'all' para todos
-            claim_id (str): ID relacionado (opcional)
-            action (str): Acción asociada (opcional)
-        
-        Returns:
-            bool: True si fue exitoso
+        Agrega notificaciones (una por usuario si es para todos)
         """
         if notification_type not in NOTIFICATION_TYPES:
             raise ValueError(f"Tipo de notificación no válido: {notification_type}. Opciones: {list(NOTIFICATION_TYPES.keys())}")
-            
+        
+        if user_target == 'all':
+            # Verificar que existan usuarios en sesión
+            df_usuarios = st.session_state.get('df_usuarios', pd.DataFrame())
+            if df_usuarios.empty or 'username' not in df_usuarios.columns:
+                st.error("No se pudo obtener la lista de usuarios para generar notificaciones")
+                return False
+
+            resultados = []
+
+            for username in df_usuarios['username'].dropna().unique():
+                success = self._agregar_notificacion_individual(
+                    notification_type, message, username, claim_id, action
+                )
+                resultados.append(success)
+
+            return all(resultados)
+
+        else:
+            return self._agregar_notificacion_individual(
+                notification_type, message, user_target, claim_id, action
+            )
+
+    def _agregar_notificacion_individual(self, notification_type, user_target, message, claim_id=None, action=None):
+        """Agrega una sola fila de notificación para un usuario"""
         new_id = self._get_next_id()
         if new_id is None:
             return False
-            
+
         new_notification = [
             new_id,
             notification_type,
@@ -61,8 +75,7 @@ class NotificationManager:
             False,  # Leída
             action or ""
         ]
-        
-        # Intento con retry
+
         for attempt in range(self.max_retries):
             success, error = api_manager.safe_sheet_operation(
                 self.sheet.append_row,
@@ -71,9 +84,10 @@ class NotificationManager:
             if success:
                 return True
             time.sleep(1)
-            
-        st.error(f"Fallo al agregar notificación después de {self.max_retries} intentos")
+
+        st.error(f"Fallo al agregar notificación para {user_target}")
         return False
+
         
     def get_for_user(self, username, unread_only=True, limit=MAX_NOTIFICATIONS):
         """
