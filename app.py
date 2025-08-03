@@ -308,12 +308,12 @@ with st.sidebar:
     if nuevo_modo != st.session_state.modo_oscuro:
         st.session_state.modo_oscuro = nuevo_modo
         st.rerun()
+
+    # En el sidebar
+    render_notification_bell()
     
     st.markdown("---")
     render_user_widget()
-    
-    # En el sidebar
-    render_notification_bell()
     
     # Herramientas de administrador (solo visible para admins)
     if user_role == 'admin':
