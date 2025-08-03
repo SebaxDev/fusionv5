@@ -164,7 +164,7 @@ class NotificationManager:
             df_validas = df[df['Fecha_Hora'].notna()].copy()
 
             # Comparación con corte
-            cutoff_date = pd.Timestamp(ahora_argentina()) - pd.Timedelta(days=days)
+            cutoff_date = ahora_argentina().replace(tzinfo=None) - timedelta(days=days)
 
             old_ids = df_validas[df_validas['Fecha_Hora'] < cutoff_date]['ID'].tolist()
 
