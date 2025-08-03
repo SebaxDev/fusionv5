@@ -7,11 +7,11 @@ import streamlit as st
 from utils.api_manager import api_manager
 
 @st.cache_data(ttl=15)
-def safe_get_sheet_data(sheet, expected_columns):
+def safe_get_sheet_data(_sheet, columnas=None):
     """Carga datos de una hoja de forma segura"""
     try:
         # Obtener todos los valores como lista de listas
-        data, error = api_manager.safe_sheet_operation(sheet.get_all_values)
+        data, error = api_manager.safe_sheet_operation(_sheet.get_all_values)
         if error:
             st.error(f"Error al obtener datos: {error}")
             return pd.DataFrame(columns=expected_columns)
