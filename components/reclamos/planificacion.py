@@ -119,10 +119,10 @@ def _mostrar_reclamos_disponibles(df_reclamos, grupos_activos):
         errors='coerce'
     )
 
-    # Asegurar que no haya IDs vacíos - ESTA ES LA PARTE QUE NECESITA CORRECCIÓN
+    # Asegurar que no haya IDs vacíos
     df_reclamos["ID Reclamo"] = df_reclamos["ID Reclamo"].replace('', pd.NA)
     df_reclamos["ID Reclamo"] = df_reclamos["ID Reclamo"].fillna(
-        "temp_" + pd.Series(range(len(df_reclamos))).astype(str)  # <-- Corregido
+        "temp_" + pd.Series(range(len(df_reclamos))).astype(str))
     
     df_pendientes = df_reclamos[df_reclamos["Estado"] == "Pendiente"].copy()
 
