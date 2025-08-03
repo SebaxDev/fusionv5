@@ -435,6 +435,8 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+st.markdown("---")
+
 # Dashboard de métricas
 render_metrics_dashboard(df_reclamos, is_mobile=is_mobile())
 
