@@ -1,66 +1,57 @@
 """
-Componente del dashboard de métricas
+Componente del dashboard de métricas optimizado
+Versión 2.3 - Diseño responsive mejorado
 """
 import streamlit as st
 import pandas as pd
+from datetime import datetime
 
-def render_metrics_dashboard(df_reclamos):
-    """Renderiza el dashboard de métricas con animaciones"""
+def render_metrics_dashboard(df_reclamos, is_mobile=False):
+    """Renderiza el dashboard de métricas optimizado para móvil/desktop"""
     try:
+        if df_reclamos.empty:
+            st.warning("No hay datos de reclamos para mostrar")
+            return
+
         df_metricas = df_reclamos.copy()
 
-        # Solo reclamos activos (Pendientes o En curso)
+        # Procesamiento de datos
         df_activos = df_metricas[df_metricas["Estado"].isin(["Pendiente", "En curso"])]
-
         total_activos = len(df_activos)
         pendientes = len(df_activos[df_activos["Estado"] == "Pendiente"])
         en_curso = len(df_activos[df_activos["Estado"] == "En curso"])
         resueltos = len(df_metricas[df_metricas["Estado"] == "Resuelto"])
-
-        # Desconexiones a pedido (estado vacío o nulo)
         desconexiones = df_metricas["Estado"].isna().sum() + (df_metricas["Estado"] == "").sum()
 
-        # Métricas principales con efectos hover
-        st.markdown("""
-        <div style="display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap;">
-        """, unsafe_allow_html=True)
+        # Diseño responsive basado en is_mobile
+        if is_mobile:
+            # Diseño para móviles (2 columnas)
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.metric("📄 Activos", f"{total_activos}/{desconexiones}")
+                st.metric("🔧 En curso", en_curso)
+                
+            with col2:
+                st.metric("🕒 Pendientes", pendientes)
+                st.metric("✅ Resueltos", resueltos)
+        else:
+            # Diseño para desktop (4 columnas)
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                st.metric("📄 Activos", f"{total_activos}/{desconexiones}")
+            with col2:
+                st.metric("🕒 Pendientes", pendientes)
+            with col3:
+                st.metric("🔧 En curso", en_curso)
+            with col4:
+                st.metric("✅ Resueltos", resueltos)
 
-        colm1, colm2, colm3, colm4 = st.columns(4)
-
-        with colm1:
-            st.markdown(f"""
-            <div class="metric-container hover-card">
-                <h4 style="margin: 0; color: #0d6efd;">📄 Activos</h4>
-                <h3 style="margin: 8px 0 0 0; font-size: 1.8rem; font-weight: bold;">{total_activos} / {desconexiones}</h3>
-            </div>
-            """, unsafe_allow_html=True)
-
-        with colm2:
-            st.markdown(f"""
-            <div class="metric-container hover-card">
-                <h4 style="margin: 0; color: #fd7e14;">🕒 Pendientes</h4>
-                <h3 style="margin: 8px 0 0 0; font-size: 1.8rem; font-weight: bold;">{pendientes}</h3>
-            </div>
-            """, unsafe_allow_html=True)
-
-        with colm3:
-            st.markdown(f"""
-            <div class="metric-container hover-card">
-                <h4 style="margin: 0; color: #0dcaf0;">🔧 En curso</h4>
-                <h3 style="margin: 8px 0 0 0; font-size: 1.8rem; font-weight: bold;">{en_curso}</h3>
-            </div>
-            """, unsafe_allow_html=True)
-
-        with colm4:
-            st.markdown(f"""
-            <div class="metric-container hover-card">
-                <h4 style="margin: 0; color: #198754;">✅ Resueltos</h4>
-                <h3 style="margin: 8px 0 0 0; font-size: 1.8rem; font-weight: bold;">{resueltos}</h3>
-            </div>
-            """, unsafe_allow_html=True)
-
-        st.markdown("</div>", unsafe_allow_html=True)
+        # Mostrar última actualización
+        st.caption(f"Última actualización: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
 
     except Exception as e:
-        st.info("No hay datos disponibles para mostrar métricas aún.")
-        st.error(f"Error en métricas: {e}")
+        st.error(f"Error al mostrar métricas: {str(e)}")
+        if st.session_state.get('DEBUG_MODE', False):
+            st.exception(e)

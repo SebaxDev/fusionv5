@@ -1,6 +1,6 @@
 # --------------------------------------------------
 # Aplicación principal de gestión de reclamos optimizada
-# Versión 2.2 - Con diseño profesional mejorado
+# Versión 2.3 - Diseño optimizado para rendimiento
 # --------------------------------------------------
 
 # Standard library
@@ -59,7 +59,7 @@ from config.settings import (
 )
 
 # --------------------------
-# FUNCIONES AUXILIARES MEJORADAS
+# FUNCIONES AUXILIARES OPTIMIZADAS
 # --------------------------
 
 def generar_id_unico():
@@ -95,28 +95,16 @@ def is_system_dark_mode():
         return False
 
 def show_error(message):
-    """Muestra un mensaje de error con estilo mejorado"""
-    st.markdown(f"""
-    <div class="stAlert">
-        <p style="color:var(--danger-color);">❌ {message}</p>
-    </div>
-    """, unsafe_allow_html=True)
+    """Muestra un mensaje de error optimizado"""
+    st.error(message)
 
 def show_success(message):
-    """Muestra un mensaje de éxito con estilo mejorado"""
-    st.markdown(f"""
-    <div class="stAlert">
-        <p style="color:var(--success-color);">✅ {message}</p>
-    </div>
-    """, unsafe_allow_html=True)
+    """Muestra un mensaje de éxito optimizado"""
+    st.success(message)
 
 def show_warning(message):
-    """Muestra un mensaje de advertencia con estilo mejorado"""
-    st.markdown(f"""
-    <div class="stAlert">
-        <p style="color:var(--warning-color);">⚠️ {message}</p>
-    </div>
-    """, unsafe_allow_html=True)
+    """Muestra un mensaje de advertencia optimizado"""
+    st.warning(message)
 
 # --------------------------
 # CONFIGURACIÓN DE PÁGINA
@@ -136,26 +124,22 @@ else:
         layout="wide",
         initial_sidebar_state="collapsed",
         menu_items={
-            'About': "Sistema de gestión de reclamos v2.2"
+            'About': "Sistema de gestión de reclamos v2.3"
         }
     )
 
-# Inyectar estilos CSS personalizados
+# Inyectar estilos CSS optimizados
 if "modo_oscuro" not in st.session_state:
     st.session_state.modo_oscuro = is_system_dark_mode()
 
 st.markdown(get_main_styles(dark_mode=st.session_state.modo_oscuro), unsafe_allow_html=True)
 
 # --------------------------
-# SIDEBAR MEJORADO
+# SIDEBAR OPTIMIZADO
 # --------------------------
 
 with st.sidebar:
-    st.markdown("""
-    <div class="neumorphic">
-        <h3 style="margin:0; color:var(--primary-color);">Panel de Control</h3>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("### Panel de Control")
     
     nuevo_modo = st.toggle(
         "🌙 Modo oscuro",
@@ -171,14 +155,14 @@ with st.sidebar:
     render_user_widget()
     
     st.markdown(f"""
-    <div class="neumorphic">
-        <p style="margin:0; color:var(--secondary-color);"><strong>Versión:</strong> 2.2.0</p>
-        <p style="margin:0; color:var(--text-color); opacity:0.8;"><strong>Última actualización:</strong> {datetime.now().strftime("%d/%m/%Y %H:%M")}</p>
+    <div style="margin-top: 20px;">
+        <p style="margin:0;"><strong>Versión:</strong> 2.3.0</p>
+        <p style="margin:0;"><strong>Última actualización:</strong> {datetime.now().strftime("%d/%m/%Y %H:%M")}</p>
     </div>
     """, unsafe_allow_html=True)
 
 # --------------------------
-# INICIALIZACIÓN GARANTIZADA
+# INICIALIZACIÓN
 # --------------------------
 
 class AppState:
@@ -202,7 +186,7 @@ class AppState:
 app_state = AppState()
 
 # --------------------------
-# CONEXIÓN CON GOOGLE SHEETS (MEJORADA)
+# CONEXIÓN CON GOOGLE SHEETS
 # --------------------------
 
 @st.cache_resource(ttl=3600)
@@ -227,7 +211,7 @@ def init_google_sheets():
         show_error(f"Error de conexión: {str(e)}")
         st.stop()
 
-# Carga con spinner mejorado
+# Carga con spinner optimizado
 loading_placeholder = st.empty()
 loading_placeholder.markdown(get_loading_spinner(), unsafe_allow_html=True)
 try:
@@ -249,23 +233,20 @@ user_info = st.session_state.auth.get('user_info', {})
 user_role = user_info.get('rol', '')
 
 # --------------------------
-# CARGA DE DATOS (MEJORADA)
+# CARGA DE DATOS OPTIMIZADA
 # --------------------------
 
 @st.cache_data(ttl=30, show_spinner=False)
 def cargar_datos():
-    """Carga datos de Google Sheets con manejo robusto de fechas y validaciones"""
+    """Carga datos de Google Sheets con manejo robusto de fechas"""
     try:
-        # Mostrar spinner personalizado
         loading_placeholder = st.empty()
         loading_placeholder.markdown(get_loading_spinner(), unsafe_allow_html=True)
         
-        # Cargar datos
         df_reclamos = safe_get_sheet_data(sheet_reclamos, COLUMNAS_RECLAMOS)
         df_clientes = safe_get_sheet_data(sheet_clientes, COLUMNAS_CLIENTES)
         df_usuarios = safe_get_sheet_data(sheet_usuarios, COLUMNAS_USUARIOS)
         
-        # Validación de datos
         if df_reclamos.empty:
             show_warning("La hoja de reclamos está vacía o no se pudo cargar")
         if df_clientes.empty:
@@ -280,7 +261,6 @@ def cargar_datos():
             if col in df_reclamos.columns:
                 df_reclamos[col] = df_reclamos[col].astype(str).str.strip()
 
-        # Procesamiento de fechas
         if 'Fecha y hora' in df_reclamos.columns:
             df_reclamos['Fecha y hora'] = df_reclamos['Fecha y hora'].apply(
                 lambda x: parse_fecha(x) if not pd.isna(x) else pd.NaT
@@ -288,108 +268,40 @@ def cargar_datos():
             df_reclamos['Fecha_formateada'] = df_reclamos['Fecha y hora'].apply(
                 lambda x: format_fecha(x, '%d/%m/%Y %H:%M', 'Fecha inválida')
             )
-        else:
-            show_error("No se encontró la columna 'Fecha y hora' en los datos de reclamos")
-            df_reclamos['Fecha y hora'] = pd.NaT
-            df_reclamos['Fecha_formateada'] = 'Columna no encontrada'
             
         return df_reclamos, df_clientes, df_usuarios
         
     except Exception as e:
-        show_error(f"Error crítico al cargar datos: {str(e)}")
+        show_error(f"Error al cargar datos: {str(e)}")
         if DEBUG_MODE:
             st.exception(e)
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
     finally:
         loading_placeholder.empty()
 
-# Cargar datos
 df_reclamos, df_clientes, df_usuarios = cargar_datos()
 st.session_state.df_reclamos = df_reclamos
 st.session_state.df_clientes = df_clientes
 
 # --------------------------
-# MIGRACIÓN DE UUID (MEJORADA)
+# INTERFAZ PRINCIPAL OPTIMIZADA
 # --------------------------
 
-def migrar_uuids_existentes():
-    """Genera UUIDs para registros existentes que no los tengan"""
-    try:
-        updates = []
-        
-        # Para Reclamos
-        if 'ID Reclamo' in df_reclamos.columns:
-            reclamos_sin_uuid = df_reclamos[df_reclamos['ID Reclamo'].isna() | (df_reclamos['ID Reclamo'] == '')]
-            if not reclamos_sin_uuid.empty:
-                show_warning(f"Hay {len(reclamos_sin_uuid)} reclamos sin UUID. Generando IDs...")
-                
-                for idx, row in reclamos_sin_uuid.iterrows():
-                    updates.append({
-                        "range": f"P{idx + 2}",
-                        "values": [[generar_id_unico()]]
-                    })
-
-        # Para Clientes
-        if 'ID Cliente' in df_clientes.columns:
-            clientes_sin_uuid = df_clientes[df_clientes['ID Cliente'].isna() | (df_clientes['ID Cliente'] == '')]
-            if not clientes_sin_uuid.empty:
-                show_warning(f"Hay {len(clientes_sin_uuid)} clientes sin UUID. Generando IDs...")
-                
-                for idx, row in clientes_sin_uuid.iterrows():
-                    updates.append({
-                        "range": f"G{idx + 2}",
-                        "values": [[generar_id_unico()]]
-                    })
-
-        # Procesar actualizaciones por lotes
-        if updates:
-            batch_size = 50
-            for i in range(0, len(updates), batch_size):
-                batch = updates[i:i + batch_size]
-                success, error = api_manager.safe_sheet_operation(
-                    batch_update_sheet,
-                    sheet_reclamos if i < len(reclamos_sin_uuid) else sheet_clientes,
-                    batch,
-                    is_batch=True
-                )
-                if not success:
-                    show_error(f"Error al actualizar lote: {error}")
-                    return False
-            
-            show_success("UUIDs generados para registros existentes")
-            st.cache_data.clear()
-            return True
-            
-        return False
-
-    except Exception as e:
-        show_error(f"Error en la migración de UUIDs: {str(e)}")
-        if DEBUG_MODE:
-            st.exception(e)
-        return False
-
-# --------------------------
-# INTERFAZ PRINCIPAL (MEJORADA)
-# --------------------------
-
-# Header moderno
 st.markdown("""
-<div class="neumorphic">
-    <div style="text-align: center;">
-        <h1 style="margin:0; margin-bottom:0.5rem; background:linear-gradient(90deg, var(--primary-color), var(--secondary-color)); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">
-            📋 Fusion Reclamos App
-        </h1>
-        <p style="margin:0; font-size:1.1rem; color:var(--text-color); opacity:0.9;">
-            Sistema integral de gestión de reclamos técnicos
-        </p>
-    </div>
+<div style="text-align: center;">
+    <h1 style="margin:0; margin-bottom:0.5rem;">
+        📋 Fusion Reclamos App
+    </h1>
+    <p style="margin:0;">
+        Sistema integral de gestión de reclamos técnicos
+    </p>
 </div>
 """, unsafe_allow_html=True)
 
 # Dashboard de métricas
 render_metrics_dashboard(df_reclamos, is_mobile=is_mobile())
 
-# Navegación
+# Navegación optimizada
 opcion = render_navigation() if not is_mobile() else st.selectbox(
     "Menú principal",
     options=["Inicio", "Reclamos cargados", "Cierre de Reclamos"],
@@ -466,20 +378,20 @@ COMPONENTES = {
 # Renderizar componente seleccionado
 if opcion in COMPONENTES and has_permission(COMPONENTES[opcion]["permiso"]):
     with st.container():
-        st.markdown('<div class="section-container dark-transition">', unsafe_allow_html=True)
+        st.markdown('<div class="section-container">', unsafe_allow_html=True)
         resultado = COMPONENTES[opcion]["render"](**COMPONENTES[opcion]["params"])
         st.markdown('</div>', unsafe_allow_html=True)
         
         if resultado and resultado.get('needs_refresh'):
             st.cache_data.clear()
-            time.sleep(2)
+            time.sleep(1)
             st.rerun()
 
 # --------------------------
-# RESUMEN DE JORNADA (MEJORADO)
+# RESUMEN DE JORNADA OPTIMIZADO
 # --------------------------
 st.markdown("---")
 with st.container():
-    st.markdown('<div class="section-container dark-transition">', unsafe_allow_html=True)
+    st.markdown('<div class="section-container">', unsafe_allow_html=True)
     render_resumen_jornada(df_reclamos)
     st.markdown('</div>', unsafe_allow_html=True)
