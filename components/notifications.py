@@ -147,27 +147,23 @@ class NotificationManager:
     def clear_old(self, days=30):
         """
         Limpia notificaciones antiguas
-        
-        Args:
-            days (int): Días de antigüedad para conservar
-        
-        Returns:
-            bool: True si fue exitoso
         """
         try:
             df = safe_get_sheet_data(self.sheet, COLUMNAS_NOTIFICACIONES)
             if df.empty:
                 return True
-                
-            cutoff_date = ahora_argentina() - timedelta(days=days)
-            old_ids = df[pd.to_datetime(df['Fecha_Hora']) < cutoff_date]['ID'].tolist()
-            
+
+            # Conversión explícita
+            df['Fecha_Hora'] = pd.to_datetime(df['Fecha_Hora'], errors='coerce')
+            cutoff_date = pd.to_datetime(ahora_argentina()) - pd.Timedelta(days=days)
+
+            old_ids = df[df['Fecha_Hora'] < cutoff_date]['ID'].tolist()
+
             if not old_ids:
                 return True
-                
-            # Eliminar filas (requiere implementación específica según API)
+
             return self._delete_rows(old_ids)
-            
+
         except Exception as e:
             st.error(f"Error al limpiar notificaciones: {str(e)}")
             return False
