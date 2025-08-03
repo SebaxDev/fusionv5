@@ -209,6 +209,42 @@ def migrar_uuids_existentes(sheet_reclamos, sheet_clientes):
         return False
 
 # --------------------------
+# CONEXIÓN CON GOOGLE SHEETS
+# --------------------------
+
+@st.cache_resource(ttl=3600)
+def init_google_sheets():
+    """Conexión optimizada a Google Sheets con retry automático"""
+    @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(3))
+    def _connect():
+        creds = service_account.Credentials.from_service_account_info(
+            {**st.secrets["gcp_service_account"], "private_key": st.secrets["gcp_service_account"]["private_key"].replace("\\n", "\n")},
+            scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+        )
+        client = gspread.authorize(creds)
+        return (
+            client.open_by_key(SHEET_ID).worksheet(WORKSHEET_RECLAMOS),
+            client.open_by_key(SHEET_ID).worksheet(WORKSHEET_CLIENTES),
+            client.open_by_key(SHEET_ID).worksheet(WORKSHEET_USUARIOS)
+        )
+    
+    try:
+        return _connect()
+    except Exception as e:
+        show_error(f"Error de conexión: {str(e)}")
+        st.stop()
+
+# Carga con spinner optimizado
+loading_placeholder = st.empty()
+loading_placeholder.markdown(get_loading_spinner(), unsafe_allow_html=True)
+try:
+    sheet_reclamos, sheet_clientes, sheet_usuarios = init_google_sheets()
+    if not all([sheet_reclamos, sheet_clientes, sheet_usuarios]):
+        st.stop()
+finally:
+    loading_placeholder.empty()
+
+# --------------------------
 # AUTENTICACIÓN
 # --------------------------
 
@@ -320,42 +356,6 @@ class AppState:
                 st.session_state[key] = value
 
 app_state = AppState()
-
-# --------------------------
-# CONEXIÓN CON GOOGLE SHEETS
-# --------------------------
-
-@st.cache_resource(ttl=3600)
-def init_google_sheets():
-    """Conexión optimizada a Google Sheets con retry automático"""
-    @retry(wait=wait_exponential(multiplier=1, min=4, max=10), stop=stop_after_attempt(3))
-    def _connect():
-        creds = service_account.Credentials.from_service_account_info(
-            {**st.secrets["gcp_service_account"], "private_key": st.secrets["gcp_service_account"]["private_key"].replace("\\n", "\n")},
-            scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-        )
-        client = gspread.authorize(creds)
-        return (
-            client.open_by_key(SHEET_ID).worksheet(WORKSHEET_RECLAMOS),
-            client.open_by_key(SHEET_ID).worksheet(WORKSHEET_CLIENTES),
-            client.open_by_key(SHEET_ID).worksheet(WORKSHEET_USUARIOS)
-        )
-    
-    try:
-        return _connect()
-    except Exception as e:
-        show_error(f"Error de conexión: {str(e)}")
-        st.stop()
-
-# Carga con spinner optimizado
-loading_placeholder = st.empty()
-loading_placeholder.markdown(get_loading_spinner(), unsafe_allow_html=True)
-try:
-    sheet_reclamos, sheet_clientes, sheet_usuarios = init_google_sheets()
-    if not all([sheet_reclamos, sheet_clientes, sheet_usuarios]):
-        st.stop()
-finally:
-    loading_placeholder.empty()
 
 # --------------------------
 # CARGA DE DATOS OPTIMIZADA
