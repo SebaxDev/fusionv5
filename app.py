@@ -276,7 +276,7 @@ with st.sidebar:
                     disabled=st.session_state.get('uuid_migration_in_progress', False)):
             st.session_state.uuid_migration_in_progress = True
             with st.spinner("Migrando UUIDs..."):
-                if migrar_uuids_existentes():
+                if migrar_uuids_existentes(sheet_reclamos, sheet_clientes):
                     st.rerun()
             st.session_state.uuid_migration_in_progress = False
     
