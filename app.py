@@ -234,7 +234,6 @@ def init_google_sheets():
             client.open_by_key(SHEET_ID).worksheet(WORKSHEET_RECLAMOS),
             client.open_by_key(SHEET_ID).worksheet(WORKSHEET_CLIENTES),
             client.open_by_key(SHEET_ID).worksheet(WORKSHEET_USUARIOS),
-            client.open_by_key(SHEET_ID).worksheet(WORKSHEET_EMPRESAS),
             sheet_notifications  # Retornamos también la hoja de notificaciones
         )
     
@@ -249,7 +248,7 @@ loading_placeholder = st.empty()
 loading_placeholder.markdown(get_loading_spinner(), unsafe_allow_html=True)
 try:
     sheet_reclamos, sheet_clientes, sheet_usuarios, sheet_notifications = init_google_sheets()
-    if not all([sheet_reclamos, sheet_clientes, sheet_usuarios, sheet_empresas, sheet_notifications]):
+    if not all([sheet_reclamos, sheet_clientes, sheet_usuarios, sheet_notifications]):
         st.stop()
 finally:
     loading_placeholder.empty()
