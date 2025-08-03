@@ -201,22 +201,36 @@ def _mostrar_edicion_reclamo(df, sheet_reclamos):
     st.markdown("---")
     st.markdown("### ✏️ Editar un reclamo puntual")
     
-    # Crear selector mejorado
+    # Crear selector mejorado (sin UUID visible)
     df["selector"] = df.apply(
-        lambda x: f"{x['ID Reclamo']} - {x['Nombre']} ({x['Tipo de reclamo']}, {x['Estado']})", 
+        lambda x: f"{x['Nº Cliente']} - {x['Nombre']} ({x['Estado']})", 
         axis=1
     )
     
+    # Añadir búsqueda por número de cliente o nombre
+    busqueda = st.text_input("🔍 Buscar por número de cliente o nombre")
+    
+    # Filtrar opciones basadas en la búsqueda
+    opciones_filtradas = [""] + df["selector"].tolist()
+    if busqueda:
+        opciones_filtradas = [""] + [
+            opc for opc in df["selector"].tolist() 
+            if busqueda.lower() in opc.lower()
+        ]
+    
     seleccion = st.selectbox(
         "Seleccioná un reclamo para editar", 
-        [""] + df["selector"].tolist()
+        opciones_filtradas,
+        index=0
     )
 
     if not seleccion:
         return False
 
-    reclamo_id = seleccion.split(" - ")[0]
-    reclamo_actual = df[df["ID Reclamo"] == reclamo_id].iloc[0]
+    # Obtener el ID del reclamo (usando el UUID interno)
+    numero_cliente = seleccion.split(" - ")[0]
+    reclamo_actual = df[df["Nº Cliente"] == numero_cliente].iloc[0]
+    reclamo_id = reclamo_actual["ID Reclamo"]  # <-- Esto sigue usando el UUID internamente
 
     # Mostrar información del reclamo
     with st.expander("📄 Información del reclamo", expanded=True):
