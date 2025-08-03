@@ -45,7 +45,7 @@ def _mostrar_distribucion_trabajo(df_en_curso):
         df_en_curso["Técnico"] = df_en_curso["Técnico"].fillna("").astype(str)
         df_en_curso = df_en_curso[df_en_curso["Técnico"].str.strip() != ""]
 
-        # CORRECCIÓN: Añadí el paréntesis que faltaba en esta línea
+        # LÍNEA CORREGIDA - Se agregó el paréntesis faltante
         df_en_curso["tecnicos_set"] = df_en_curso["Técnico"].apply(
             lambda x: tuple(sorted([t.strip().upper() for t in x.split(",") if t.strip()]))
         
