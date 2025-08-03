@@ -153,11 +153,16 @@ class NotificationManager:
             if df.empty:
                 return True
 
-            # Conversión explícita
+            # Conversión robusta a datetime
             df['Fecha_Hora'] = pd.to_datetime(df['Fecha_Hora'], errors='coerce')
-            cutoff_date = pd.to_datetime(ahora_argentina()) - pd.Timedelta(days=days)
 
-            old_ids = df[df['Fecha_Hora'] < cutoff_date]['ID'].tolist()
+            # Eliminar NaT para evitar errores de comparación
+            df_validas = df[df['Fecha_Hora'].notna()].copy()
+
+            # Comparación con corte
+            cutoff_date = pd.Timestamp(ahora_argentina()) - pd.Timedelta(days=days)
+
+            old_ids = df_validas[df_validas['Fecha_Hora'] < cutoff_date]['ID'].tolist()
 
             if not old_ids:
                 return True
@@ -167,6 +172,7 @@ class NotificationManager:
         except Exception as e:
             st.error(f"Error al limpiar notificaciones: {str(e)}")
             return False
+
             
     def _delete_rows(self, row_ids):
         """Método interno para eliminar filas (implementar según API)"""
