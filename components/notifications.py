@@ -8,6 +8,11 @@ from utils.api_manager import api_manager
 from utils.data_manager import safe_get_sheet_data, batch_update_sheet
 from config.settings import NOTIFICATION_TYPES, COLUMNAS_NOTIFICACIONES, MAX_NOTIFICATIONS
 
+@st.cache_data(ttl=10)
+def get_cached_notifications(sheet, username, unread_only=True, limit=MAX_NOTIFICATIONS):
+    nm = NotificationManager(sheet)
+    return nm.get_for_user(username, unread_only, limit)
+
 class NotificationManager:
     def __init__(self, sheet_notifications):
         self.sheet = sheet_notifications

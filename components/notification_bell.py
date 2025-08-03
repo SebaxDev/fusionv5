@@ -13,7 +13,7 @@ def render_notification_bell():
     if not user:
         return
         
-    notifications = st.session_state.notification_manager.get_for_user(user, unread_only=True)
+    notifications = get_cached_notifications(st.session_state.notification_manager.sheet, user)
     
     unread_count = len(notifications)
     
@@ -45,6 +45,7 @@ def render_notification_bell():
                             # Botón para marcar como leída
                             if st.button("Marcar como leída", key=f"read_{notification['ID']}"):
                                 st.session_state.notification_manager.mark_as_read([notification['ID']])
+                                st.cache_data.clear()
                                 st.rerun()
                                 
                         st.divider()
