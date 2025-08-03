@@ -243,6 +243,14 @@ def init_google_sheets():
         st.error(f"Error de conexión: {str(e)}")
         st.stop()
 
+@st.cache_data(ttl=30, show_spinner=False)
+def precache_all_data(sheet_reclamos, sheet_clientes, sheet_usuarios, sheet_notifications):
+    """Precarga silenciosa de datos para acelerar la app"""
+    _ = safe_get_sheet_data(sheet_reclamos, COLUMNAS_RECLAMOS)
+    _ = safe_get_sheet_data(sheet_clientes, COLUMNAS_CLIENTES)
+    _ = safe_get_sheet_data(sheet_usuarios, COLUMNAS_USUARIOS)
+    _ = safe_get_sheet_data(sheet_notifications, COLUMNAS_NOTIFICACIONES)
+
 # Carga con spinner optimizado
 loading_placeholder = st.empty()
 loading_placeholder.markdown(get_loading_spinner(), unsafe_allow_html=True)
@@ -260,6 +268,9 @@ finally:
 if not check_authentication():
     render_login(sheet_usuarios)
     st.stop()
+
+# ✅ Precarga silenciosa de las hojas para acelerar primer render
+precache_all_data(sheet_reclamos, sheet_clientes, sheet_usuarios, sheet_notifications)
 
 user_info = st.session_state.auth.get('user_info', {})
 user_role = user_info.get('rol', '')
@@ -312,9 +323,9 @@ with st.sidebar:
         st.session_state.modo_oscuro = nuevo_modo
         st.rerun()
 
-    # En el sidebar
-    render_notification_bell()
-    
+    if st.session_state.auth.get("logged_in", False):
+        render_notification_bell()
+
     st.markdown("---")
     render_user_widget()
         

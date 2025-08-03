@@ -6,6 +6,7 @@ import pandas as pd
 import streamlit as st
 from utils.api_manager import api_manager
 
+@st.cache_data(ttl=15)
 def safe_get_sheet_data(sheet, expected_columns):
     """Carga datos de una hoja de forma segura"""
     try:
