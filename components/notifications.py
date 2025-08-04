@@ -47,6 +47,16 @@ class NotificationManager:
             resultados = []
 
             for username in df_usuarios['username'].dropna().unique():
+                # Verificar si tiene más de 10 notificaciones
+                df_notif = safe_get_sheet_data(self.sheet, COLUMNAS_NOTIFICACIONES)
+                user_notifs = df_notif[df_notif['Usuario_Destino'] == username]
+                if len(user_notifs) >= 10:
+                    # Borrar la más antigua (por fecha)
+                    user_notifs['Fecha_Hora'] = pd.to_datetime(user_notifs['Fecha_Hora'], errors='coerce')
+                    mas_antigua = user_notifs.sort_values('Fecha_Hora').iloc[0]
+                    index = user_notifs.index[0] + 1
+                    self._delete_rows([index])
+
                 success = self._agregar_notificacion_individual(
                     notification_type, message, username, claim_id, action
                 )
@@ -107,7 +117,7 @@ class NotificationManager:
             df['Leída'] = df['Leída'].astype(str).str.strip().str.upper().map({'FALSE': False, 'TRUE': True}).fillna(False)
 
             # Filtro por usuario y estado
-            mask = df['Usuario_Destino'].isin([username, 'all'])
+            mask = (df['Usuario_Destino'] == username) | (df['Usuario_Destino'] == 'all')
             if unread_only:
                 mask &= (df['Leída'] == False)
 
@@ -142,12 +152,13 @@ class NotificationManager:
             return False
             
         try:
+            df = safe_get_sheet_data(self.sheet, COLUMNAS_NOTIFICACIONES)
+
             updates = [{
-                'range': f"H{int(row['ID'])+1}",  # Columna 'Leída'
+                'range': f"H{int(row['ID']) + 1}",  # Columna 'Leída'
                 'values': [[True]]
-            } for row in safe_get_sheet_data(self.sheet, COLUMNAS_NOTIFICACIONES) 
-              if row['ID'] in notification_ids]
-            
+            } for _, row in df[df['ID'].isin(notification_ids)].iterrows()]
+
             if not updates:
                 return False
                 
@@ -218,13 +229,27 @@ class NotificationManager:
         )
         return success
 
-def init_notification_manager(sheet_notifications):
-    """Inicializa el manager de notificaciones con estado persistente"""
-    if 'notification_manager' not in st.session_state:
-        st.session_state.notification_manager = NotificationManager(sheet_notifications)
+    def init_notification_manager(sheet_notifications):
+        """Inicializa el manager de notificaciones con estado persistente"""
+        if 'notification_manager' not in st.session_state:
+            st.session_state.notification_manager = NotificationManager(sheet_notifications)
 
-        # Verificamos si el usuario ya inició sesión antes de limpiar
-        user = st.session_state.get('auth', {}).get('user_info', {}).get('username', '')
-        if user and st.session_state.get('clear_notifications_job') is None:
-            if st.session_state.notification_manager.clear_old():
-                st.session_state.clear_notifications_job = True
+            # Verificamos si el usuario ya inició sesión antes de limpiar
+            user = st.session_state.get('auth', {}).get('user_info', {}).get('username', '')
+            if user and st.session_state.get('clear_notifications_job') is None:
+                if st.session_state.notification_manager.clear_old():
+                    st.session_state.clear_notifications_job = True
+                    
+    def delete_notification_by_id(self, notif_id):
+        """Elimina una notificación de la hoja por ID"""
+        try:
+            df = safe_get_sheet_data(self.sheet, COLUMNAS_NOTIFICACIONES)
+            fila = df[df['ID'] == notif_id]
+            if fila.empty:
+                return False
+
+            row_id = int(fila.index[0])
+            return self._delete_rows([row_id])
+        except Exception as e:
+            st.error(f"Error al eliminar notificación: {str(e)}")
+            return False
