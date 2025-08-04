@@ -172,7 +172,7 @@ def _mostrar_reclamos_disponibles(df_reclamos, grupos_activos):
             resumen = f"📍 Sector {row['Sector']} - {row['Tipo de reclamo'].capitalize()} - {fecha_formateada}"
             col1.markdown(f"**{resumen}**")
 
-            for i, grupo in enumerate(["Grupo A", "Grupo B", "Grupo C", "Grupo D"][:grupos_activos]):
+            for i, grupo in enumerate(["Grupo A", "Grupo B", "Grupo C", "Grupo D", "Grupo E"][:grupos_activos]):
                 tecnicos = st.session_state.tecnicos_grupos[grupo]
                 tecnicos_str = ", ".join(tecnicos[:2]) + ("..." if len(tecnicos) > 2 else "") if tecnicos else "Sin técnicos"
                 
