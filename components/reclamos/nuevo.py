@@ -125,8 +125,7 @@ def _mostrar_formulario_reclamo(estado, df_clientes, sheet_reclamos, sheet_clien
                 sector = st.selectbox(
                     "🔢 Sector (1-17)",
                     options=SECTORES_DISPONIBLES,
-                    index=sector_index,
-                    key="select_sector"
+                    index=sector_index
                 )
 
         else:
