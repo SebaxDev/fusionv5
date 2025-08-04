@@ -16,14 +16,15 @@ MAX_NOTIFICATIONS = 10  # Máximo de notificaciones a mostrar en UI
 
 # Tipos de notificación
 NOTIFICATION_TYPES = {
-    'unassigned_claim': {'priority': 'alta', 'icon': '⏱️'},
-    'status_change': {'priority': 'media', 'icon': '🔄'},
-    'duplicate_claim': {'priority': 'alta', 'icon': '⚠️'},
-    'new_assignment': {'priority': 'media', 'icon': '📌'},
-    'client_update': {'priority': 'baja', 'icon': '✏️'},
-    'daily_reminder': {'priority': 'baja', 'icon': '📅'},
-    'nuevo_reclamo': {'priority': 'media', 'icon': '🆕'},
-    'reclamo_asignado': {'priority': 'media', 'icon': '👷'}
+    "unassigned_claim": {"priority": "alta", "icon": "⏱️"},
+    "status_change": {"priority": "media", "icon": "🔄"},
+    "duplicate_claim": {"priority": "alta", "icon": "⚠️"},
+    "new_assignment": {"priority": "media", "icon": "📌"},
+    "client_update": {"priority": "baja", "icon": "✏️"},
+    "daily_reminder": {"priority": "baja", "icon": "📅"},
+    "nuevo_reclamo": {"priority": "media", "icon": "🆕"},
+    "reclamo_asignado": {"priority": "media", "icon": "👷"},
+    "trabajo_asignado": {"priority": "media", "icon": "🛠️"}
 }
 
 # Columnas para la hoja de notificaciones

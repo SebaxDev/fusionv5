@@ -78,7 +78,7 @@ def render_planificacion_grupos(df_reclamos, sheet_reclamos, user):
             materiales_por_grupo = _mostrar_reclamos_asignados(df_pendientes, grupos_activos)
             cambios = _mostrar_acciones_finales(
                 df_reclamos, sheet_reclamos, 
-                grupos_activos, materiales_por_grupo
+                grupos_activos, materiales_por_grupo, df_pendientes
             )
             
             return {'needs_refresh': cambios}
@@ -286,7 +286,7 @@ def _calcular_materiales_grupo(reclamos_grupo):
     
     return materiales_total
 
-def _mostrar_acciones_finales(df_reclamos, sheet_reclamos, grupos_activos, materiales_por_grupo):
+def _mostrar_acciones_finales(df_reclamos, sheet_reclamos, grupos_activos, materiales_por_grupo, df_pendientes):
     """Muestra botones de acción final y maneja su lógica"""
     st.markdown("---")
     cambios = False
