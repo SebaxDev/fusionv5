@@ -6,9 +6,7 @@ import pytz
 from datetime import datetime, timedelta
 from utils.date_utils import format_fecha, ahora_argentina
 
-from config.settings import NOTIFICATION_TYPES  # necesario para iconos
-# Asegura que este archivo se cargue luego de init_notification_manager()
-# ya que usa st.session_state.notification_manager
+from config.settings import NOTIFICATION_TYPES, DEBUG_MODE
 
 def render_resumen_jornada(df_reclamos):
     """Muestra el resumen de la jornada en el footer (versión mejorada)"""
