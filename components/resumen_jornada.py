@@ -5,7 +5,6 @@ import pandas as pd
 import pytz
 from datetime import datetime, timedelta
 from utils.date_utils import format_fecha, ahora_argentina
-
 from config.settings import NOTIFICATION_TYPES, DEBUG_MODE
 
 def render_resumen_jornada(df_reclamos):
@@ -85,10 +84,9 @@ def render_resumen_jornada(df_reclamos):
 
 def _notificar_reclamos_no_asignados(df):
     """
-    Detecta reclamos sin técnico hace más de 36 horas y notifica
+    Detecta reclamos sin técnico hace más de 36 horas y notifica globalmente (una vez)
     """
     if 'notification_manager' not in st.session_state or st.session_state.notification_manager is None:
-        st.warning("⚠️ No se pudo obtener la lista de usuarios para generar notificaciones")
         return
 
     ahora = ahora_argentina()
@@ -100,37 +98,26 @@ def _notificar_reclamos_no_asignados(df):
         (pd.to_datetime(df["Fecha y hora"], errors='coerce') < umbral)
     ].copy()
 
-    try:
-        ya_notificados = set([
-            n.get("ID_Reclamo")
-            for n in st.session_state.notification_manager.get_for_user("all", unread_only=False, limit=1000)
-            if n.get("Tipo") == "unassigned_claim"
-        ])
-    except Exception as e:
-        st.warning("⚠️ No se pudo obtener la lista de usuarios para generar notificaciones")
-        if DEBUG_MODE:
-            st.exception(e)
+    if df_filtrado.empty:
         return
 
-    error_mostrado = False
-    for _, row in df_filtrado.iterrows():
-        reclamo_id = row.get("ID Reclamo")
-        if not reclamo_id or reclamo_id in ya_notificados:
-            continue
+    try:
+        ya_existe = any(
+            n.get("Tipo") == "unassigned_claim"
+            for n in st.session_state.notification_manager.get_for_user("all", unread_only=False, limit=10)
+        )
 
-        mensaje = f"Reclamo de {row.get('Nombre', 'Cliente')} sin técnico asignado desde hace más de 36 horas"
+        if ya_existe:
+            return
 
-        try:
-            st.session_state.notification_manager.add(
-                notification_type="unassigned_claim",
-                message=mensaje,
-                user_target="all",
-                claim_id=reclamo_id
-            )
-        except Exception as e:
-            if not error_mostrado:
-                st.warning("⚠️ No se pudo obtener la lista de usuarios para generar notificaciones")
-                error_mostrado = True
-            if DEBUG_MODE:
-                st.exception(e)
+        mensaje = f"Hay {len(df_filtrado)} reclamos sin técnico asignado desde hace más de 36 horas."
+        st.session_state.notification_manager.add(
+            notification_type="unassigned_claim",
+            message=mensaje,
+            user_target="all"
+        )
 
+    except Exception as e:
+        if DEBUG_MODE:
+            st.warning("⚠️ No se pudo generar la notificación global")
+            st.exception(e)

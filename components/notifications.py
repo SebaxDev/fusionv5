@@ -29,39 +29,32 @@ class NotificationManager:
         return None
 
     def add(self, notification_type, message, user_target='all', claim_id=None, action=None):
+        """
+        Agrega una notificación general para todos los usuarios ('all')
+        con límite de 10 en total.
+        """
         if notification_type not in NOTIFICATION_TYPES:
             raise ValueError(f"Tipo de notificación no válido: {notification_type}. Opciones: {list(NOTIFICATION_TYPES.keys())}")
-        
-        if user_target == 'all':
-            df_usuarios = st.session_state.get('df_usuarios', pd.DataFrame())
-            if df_usuarios.empty or 'username' not in df_usuarios.columns:
-                if not st.session_state.get('usuarios_error_mostrado', False):
-                    st.warning("⚠️ No se pudo obtener la lista de usuarios para generar notificaciones")
-                    st.session_state.usuarios_error_mostrado = True
-                return False
 
-            resultados = []
+        try:
+            # Obtener todas las notificaciones actuales dirigidas a 'all'
+            df_notif = safe_get_sheet_data(self.sheet, COLUMNAS_NOTIFICACIONES)
+            df_all = df_notif[df_notif['Usuario_Destino'] == 'all']
 
-            for username in df_usuarios['username'].dropna().unique():
-                df_notif = safe_get_sheet_data(self.sheet, COLUMNAS_NOTIFICACIONES)
-                user_notifs = df_notif[df_notif['Usuario_Destino'] == username]
-                if len(user_notifs) >= 10:
-                    user_notifs['Fecha_Hora'] = pd.to_datetime(user_notifs['Fecha_Hora'], errors='coerce')
-                    mas_antigua = user_notifs.sort_values('Fecha_Hora').iloc[0]
-                    index = user_notifs.index[0]
-                    self._delete_rows([index])
+            if len(df_all) >= 10:
+                df_all['Fecha_Hora'] = pd.to_datetime(df_all['Fecha_Hora'], errors='coerce')
+                mas_antigua = df_all.sort_values('Fecha_Hora').iloc[0]
+                row_id = df_all.index[0]
+                self._delete_rows([row_id])
 
-                success = self._agregar_notificacion_individual(
-                    notification_type, message, username, claim_id, action
-                )
-                resultados.append(success)
-
-            return all(resultados)
-
-        else:
             return self._agregar_notificacion_individual(
-                notification_type, message, user_target, claim_id, action
+                notification_type, message, 'all', claim_id, action
             )
+
+        except Exception as e:
+            st.error(f"Error al agregar notificación global: {str(e)}")
+            return False
+
 
     def _agregar_notificacion_individual(self, notification_type, message, user_target, claim_id=None, action=None):
         new_id = self._get_next_id()
