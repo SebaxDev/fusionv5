@@ -190,9 +190,15 @@ def _procesar_envio_formulario(estado, nombre, direccion, telefono, sector, tipo
     }
     campos_vacios = [campo for campo, valor in campos_obligatorios.items() if not valor]
 
-    # ✅ Validación del sector antes de guardar
-    if str(sector).strip() not in SECTORES_DISPONIBLES:
-        st.error(f"⚠️ El sector ingresado ({sector}) no es válido. Debe ser un número entre 1 y 17.")
+    # ✅ Validación y normalización del sector
+    try:
+        sector_normalizado = str(int(str(sector).strip()))  # "09" → "9"
+    except ValueError:
+        st.error(f"⚠️ El sector ingresado ({sector}) no es un número válido.")
+        return estado
+
+    if sector_normalizado not in SECTORES_DISPONIBLES:
+        st.error(f"⚠️ El sector ingresado ({sector_normalizado}) no es válido. Debe estar entre 1 y 17.")
         return estado
 
     if not estado['nro_cliente']:
@@ -210,7 +216,7 @@ def _procesar_envio_formulario(estado, nombre, direccion, telefono, sector, tipo
                 fila_reclamo = [
                     fecha_hora_str,
                     estado['nro_cliente'],
-                    str(sector),
+                    sector_normalizado,
                     nombre.upper(),
                     direccion.upper(),
                     telefono,
@@ -253,7 +259,7 @@ def _procesar_envio_formulario(estado, nombre, direccion, telefono, sector, tipo
                     if cliente_row_idx.empty:
                         fila_cliente = [
                             estado['nro_cliente'], 
-                            str(sector), 
+                            sector_normalizado,
                             nombre.upper(), 
                             direccion.upper(), 
                             telefono, 
@@ -275,8 +281,8 @@ def _procesar_envio_formulario(estado, nombre, direccion, telefono, sector, tipo
                             updates_cliente.append({"range": f"D{idx}", "values": [[direccion.upper()]]})
                         if str(df_clientes.at[cliente_row_idx[0], "Teléfono"]).strip() != telefono.strip():
                             updates_cliente.append({"range": f"E{idx}", "values": [[telefono.strip()]]})
-                        if str(df_clientes.at[cliente_row_idx[0], "Sector"]).strip() != str(sector).strip():
-                            updates_cliente.append({"range": f"B{idx}", "values": [[str(sector).strip()]]})
+                        if str(df_clientes.at[cliente_row_idx[0], "Sector"]).strip() != sector_normalizado:
+                            updates_cliente.append({"range": f"B{idx}", "values": [[sector_normalizado]]})
                         if str(df_clientes.at[cliente_row_idx[0], "N° de Precinto"]).strip() != precinto.strip():
                             updates_cliente.append({"range": f"F{idx}", "values": [[precinto.strip()]]})
                         if updates_cliente:
@@ -300,4 +306,3 @@ def _procesar_envio_formulario(estado, nombre, direccion, telefono, sector, tipo
                     st.exception(e)
     
     return estado
-
