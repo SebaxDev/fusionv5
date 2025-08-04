@@ -101,8 +101,10 @@ def render_nuevo_reclamo(df_reclamos, df_clientes, sheet_reclamos, sheet_cliente
                     st.markdown(f"**👷 Técnico asignado:** {reclamo.get('Técnico', 'No asignado') or 'No asignado'}")
                     st.markdown(f"**🙍‍♂️ Atendido por:** {reclamo.get('Atendido por', 'N/A')}")
 
-    if not estado['formulario_bloqueado']:
-        estado = _mostrar_formulario_reclamo(estado, df_clientes, sheet_reclamos, sheet_clientes, current_user)
+    if estado['reclamo_guardado']:
+        st.info("ℹ️ Reclamo registrado correctamente. Ya no se puede cargar uno nuevo para este cliente.")
+    elif not estado['formulario_bloqueado']:
+        estado = _mostrar_formulario_reclamo(...)
 
     return estado
 
@@ -239,6 +241,7 @@ def _procesar_envio_formulario(estado, nombre, direccion, telefono, sector, tipo
 
                 if success:
                     estado['reclamo_guardado'] = True
+                    estado['formulario_bloqueado'] = True
                     st.success(f"✅ Reclamo cargado para el cliente {estado['nro_cliente']} - {tipo_reclamo.upper()}")
 
                     # 🔔 Notificación por nuevo reclamo
