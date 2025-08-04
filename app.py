@@ -434,7 +434,11 @@ def cargar_datos():
 df_reclamos, df_clientes, df_usuarios = cargar_datos()
 st.session_state.df_reclamos = df_reclamos
 st.session_state.df_clientes = df_clientes
-st.session_state.df_usuarios = df_usuarios
+
+if st.session_state.df_usuarios.empty:
+    st.warning("⚠️ df_usuarios está vacío")
+elif "username" not in st.session_state.df_usuarios.columns:
+    st.warning("⚠️ df_usuarios no tiene columna 'username'")
 
 # --------------------------
 # INTERFAZ PRINCIPAL OPTIMIZADA
