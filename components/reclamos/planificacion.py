@@ -20,10 +20,10 @@ def inicializar_estado_grupos():
     """Inicializa el estado de los grupos en session_state"""
     defaults = {
         "asignaciones_grupos": {
-            "Grupo A": [], "Grupo B": [], "Grupo C": [], "Grupo D": []
+            f"Grupo {letra}": [] for letra in ["A", "B", "C", "D", "E"]
         },
         "tecnicos_grupos": {
-            "Grupo A": [], "Grupo B": [], "Grupo C": [], "Grupo D": []
+            f"Grupo {letra}": [] for letra in ["A", "B", "C", "D", "E"]
         }
     }
     
@@ -68,7 +68,7 @@ def render_planificacion_grupos(df_reclamos, sheet_reclamos, user):
 
         grupos_activos = st.slider(
             "🔢 Cantidad de grupos de trabajo activos", 
-            1, 4, 2
+            1, 5, 2
         )
 
         _mostrar_asignacion_tecnicos(grupos_activos)
@@ -222,7 +222,7 @@ def _mostrar_reclamos_asignados(df_pendientes, grupos_activos):
 
     materiales_por_grupo = {}
 
-    for grupo in ["Grupo A", "Grupo B", "Grupo C", "Grupo D"][:grupos_activos]:
+    for grupo in list(st.session_state.asignaciones_grupos.keys())[:grupos_activos]:
         reclamos_ids = st.session_state.asignaciones_grupos[grupo]
         tecnicos = st.session_state.tecnicos_grupos[grupo]
         
@@ -304,7 +304,7 @@ def _mostrar_acciones_finales(df_reclamos, sheet_reclamos, grupos_activos, mater
 def _guardar_cambios(df_reclamos, sheet_reclamos, grupos_activos):
     """Guarda los cambios en la hoja de cálculo"""
     errores = []
-    for grupo in ["Grupo A", "Grupo B", "Grupo C", "Grupo D"][:grupos_activos]:
+    for grupo in list(st.session_state.asignaciones_grupos.keys())[:grupos_activos]:
         if (st.session_state.asignaciones_grupos[grupo] and 
             not st.session_state.tecnicos_grupos[grupo]):
             errores.append(grupo)
@@ -317,7 +317,7 @@ def _guardar_cambios(df_reclamos, sheet_reclamos, grupos_activos):
         updates = []
         notificaciones = []  # Lista de notificaciones por grupo
 
-        for grupo in ["Grupo A", "Grupo B", "Grupo C", "Grupo D"][:grupos_activos]:
+        for grupo in list(st.session_state.asignaciones_grupos.keys())[:grupos_activos]:
             tecnicos = st.session_state.tecnicos_grupos[grupo]
             reclamos_ids = st.session_state.asignaciones_grupos[grupo]
             tecnicos_str = ", ".join(tecnicos).upper() if tecnicos else ""
@@ -372,7 +372,7 @@ def _generar_pdf_asignaciones(grupos_activos, materiales_por_grupo, df_pendiente
         y = height - 40
         hoy = datetime.now().strftime('%d/%m/%Y')
 
-        for grupo in ["Grupo A", "Grupo B", "Grupo C", "Grupo D"][:grupos_activos]:
+        for grupo in list(st.session_state.asignaciones_grupos.keys())[:grupos_activos]:
             reclamos_ids = st.session_state.asignaciones_grupos[grupo]
             
             if not reclamos_ids:
