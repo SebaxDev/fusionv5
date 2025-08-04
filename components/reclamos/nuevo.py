@@ -104,7 +104,7 @@ def render_nuevo_reclamo(df_reclamos, df_clientes, sheet_reclamos, sheet_cliente
     if estado['reclamo_guardado']:
         st.info("ℹ️ Reclamo registrado correctamente. Ya no se puede cargar uno nuevo para este cliente.")
     elif not estado['formulario_bloqueado']:
-        estado = _mostrar_formulario_reclamo(...)
+        estado = _mostrar_formulario_reclamo(estado, df_clientes, sheet_reclamos, sheet_clientes, current_user)
 
     return estado
 
