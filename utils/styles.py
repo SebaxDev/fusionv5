@@ -44,7 +44,7 @@ def get_main_styles(dark_mode=False):
     }}
 
     .block-container {{
-        max-width: 850px;
+        max-width: 1000px;
         margin: var(--top-margin) auto;
         padding: 0 10px;
     }}
