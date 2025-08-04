@@ -21,8 +21,10 @@ NOTIFICATION_TYPES = {
     'duplicate_claim': {'priority': 'alta', 'icon': '⚠️'},
     'new_assignment': {'priority': 'media', 'icon': '📌'},
     'client_update': {'priority': 'baja', 'icon': '✏️'},
-    'daily_reminder': {'priority': 'baja', 'icon': '📅'}
+    'daily_reminder': {'priority': 'baja', 'icon': '📅'},
+    'nuevo_reclamo': {'priority': 'media', 'icon': '🆕'}
 }
+
 
 # Columnas para la hoja de notificaciones
 COLUMNAS_NOTIFICACIONES = [

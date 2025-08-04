@@ -136,11 +136,12 @@ def _mostrar_formulario_reclamo(estado, df_clientes, sheet_reclamos, sheet_clien
                 except:
                     sector_index = 0
 
-                sector = st.selectbox(
+                sector = st.text_input(
                     "🔢 Sector (1-17)",
-                    options=SECTORES_DISPONIBLES,
-                    index=sector_index
+                    value=str(sector_index + 1),
+                    placeholder="Ingrese el sector numérico (1-17)"
                 )
+
 
         else:
             with col1:
@@ -148,12 +149,12 @@ def _mostrar_formulario_reclamo(estado, df_clientes, sheet_reclamos, sheet_clien
                 direccion = st.text_input("📍 Dirección", placeholder="Dirección completa")
             with col2:
                 telefono = st.text_input("📞 Teléfono", placeholder="Número de contacto")
-                sector = st.selectbox(
+                sector = st.text_input(
                     "🔢 Sector (1-17)",
-                    options=SECTORES_DISPONIBLES,
-                    index=0,
-                    key="select_sector_new"
+                    placeholder="Ingrese el sector numérico (1-17)",
+                    key="input_sector_new"
                 )
+
 
         tipo_reclamo = st.selectbox("📌 Tipo de Reclamo", TIPOS_RECLAMO)
         detalles = st.text_area("📝 Detalles del Reclamo", placeholder="Describe el problema o solicitud...", height=100)
@@ -188,6 +189,11 @@ def _procesar_envio_formulario(estado, nombre, direccion, telefono, sector, tipo
         "Atendido por": atendido_por.strip()
     }
     campos_vacios = [campo for campo, valor in campos_obligatorios.items() if not valor]
+
+    # ✅ Validación del sector antes de guardar
+    if str(sector).strip() not in SECTORES_DISPONIBLES:
+        st.error(f"⚠️ El sector ingresado ({sector}) no es válido. Debe ser un número entre 1 y 17.")
+        return estado
 
     if not estado['nro_cliente']:
         st.error("⚠️ Debes ingresar un número de cliente.")
@@ -294,3 +300,4 @@ def _procesar_envio_formulario(estado, nombre, direccion, telefono, sector, tipo
                     st.exception(e)
     
     return estado
+
