@@ -21,7 +21,7 @@ def render_metrics_dashboard(df_reclamos, is_mobile=False):
         pendientes = len(df_activos[df_activos["Estado"] == "Pendiente"])
         en_curso = len(df_activos[df_activos["Estado"] == "En curso"])
         resueltos = len(df_metricas[df_metricas["Estado"] == "Resuelto"])
-        desconexiones = df_metricas["Estado"].isna().sum() + (df_metricas["Estado"] == "").sum()
+        desconexiones = df_metricas["Estado"].str.strip().str.lower().eq("desconexión").sum()
 
         # Diseño responsive basado en is_mobile
         if is_mobile:
