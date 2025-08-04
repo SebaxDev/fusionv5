@@ -1,6 +1,7 @@
 # components/notification_bell.py
 
 import streamlit as st
+import uuid
 from utils.date_utils import format_fecha
 from config.settings import NOTIFICATION_TYPES
 from components.notifications import get_cached_notifications
@@ -15,7 +16,6 @@ def render_notification_bell():
         return
         
     notifications = get_cached_notifications(user)
-    
     unread_count = len(notifications)
     
     # Ícono en el sidebar
@@ -31,22 +31,31 @@ def render_notification_bell():
                 if not notifications:
                     st.info("No tienes notificaciones nuevas")
                     return
-                    
+                
                 for notification in notifications[:10]:  # Mostrar las 10 más recientes
-                    icon = NOTIFICATION_TYPES.get(notification['Tipo'], {}).get('icon', '✉️')
+                    icon = NOTIFICATION_TYPES.get(notification.get('Tipo'), {}).get('icon', '✉️')
                     
                     with st.container():
                         cols = st.columns([1, 10])
                         cols[0].markdown(f"**{icon}**")
                         
                         with cols[1]:
-                            st.markdown(f"**{notification['Mensaje']}**")
-                            st.caption(format_fecha(notification['Fecha_Hora']))
+                            st.markdown(f"**{notification.get('Mensaje', '[Sin mensaje]')}**")
+                            st.caption(format_fecha(notification.get('Fecha_Hora')))
                             
-                            # Botón para marcar como leída
-                            if st.button("Marcar como leída", key=f"read_{notification['ID']}"):
-                                st.session_state.notification_manager.mark_as_read([notification['ID']])
-                                st.cache_data.clear()
-                                st.rerun()
-                                
+                            # Clave única para el botón
+                            notif_id = notification.get("ID")
+                            if notif_id:
+                                key = f"read_{notif_id}"
+                            else:
+                                key = f"read_unknown_{uuid.uuid4()}"
+
+                            if st.button("Marcar como leída", key=key):
+                                if notif_id:
+                                    st.session_state.notification_manager.mark_as_read([notif_id])
+                                    st.cache_data.clear()
+                                    st.rerun()
+                                else:
+                                    st.warning("⚠️ No se pudo marcar como leída: la notificación no tiene ID válido.")
+                        
                         st.divider()
