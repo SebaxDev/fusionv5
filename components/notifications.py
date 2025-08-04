@@ -59,7 +59,7 @@ class NotificationManager:
                 notification_type, message, user_target, claim_id, action
             )
 
-    def _agregar_notificacion_individual(self, notification_type, user_target, message, claim_id=None, action=None):
+    def _agregar_notificacion_individual(self, notification_type, message, user_target, claim_id=None, action=None):
         """Agrega una sola fila de notificación para un usuario"""
         new_id = self._get_next_id()
         if new_id is None:
