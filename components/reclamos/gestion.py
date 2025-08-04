@@ -401,7 +401,7 @@ def _gestionar_desconexiones(df, sheet_reclamos):
 
     desconexiones = df[
         (df["Tipo de reclamo"].str.strip().str.lower() == "desconexion a pedido") &
-        ((df["Estado"].isna()) | (df["Estado"] == ""))
+        (df["Estado"].str.strip().str.lower() == "desconexión")
     ]
 
     if desconexiones.empty:

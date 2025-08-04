@@ -179,7 +179,7 @@ def _procesar_envio_formulario(estado, nombre, direccion, telefono, sector, tipo
             try:
                 fecha_hora_obj = ahora_argentina()
                 fecha_hora_str = format_fecha(fecha_hora_obj)
-                estado_reclamo = "" if tipo_reclamo.strip().lower() == "desconexion a pedido" else "Pendiente"
+                estado_reclamo = "Desconexión" if tipo_reclamo.strip().lower() == "desconexion a pedido" else "Pendiente"
                 id_reclamo = generar_id_unico()
 
                 fila_reclamo = [
