@@ -434,6 +434,7 @@ def cargar_datos():
 df_reclamos, df_clientes, df_usuarios = cargar_datos()
 st.session_state.df_reclamos = df_reclamos
 st.session_state.df_clientes = df_clientes
+st.session_state.df_usuarios = df_usuarios
 
 # --------------------------
 # INTERFAZ PRINCIPAL OPTIMIZADA
