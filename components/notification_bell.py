@@ -52,10 +52,8 @@ def render_notification_bell():
 
                             if st.button("Marcar como leída", key=key):
                                 if notif_id != "unknown":
-                                    st.session_state.notification_manager.delete_notification_by_id(notif_id)
-                                    st.session_state.user_notifications = [
-                                        n for n in st.session_state.user_notifications if n.get("ID") != notif_id
-                                    ]
+                                    st.session_state.notification_manager.mark_as_read([int(notif_id)])
+                                    st.cache_data.clear()  # ⚠️ limpia el cache para que no vuelva a aparecer
                                     st.experimental_rerun()
-                    
+         
                     st.divider()
