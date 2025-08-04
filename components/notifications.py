@@ -2,6 +2,7 @@
 
 import streamlit as st
 import pandas as pd
+import time
 from datetime import datetime, timedelta
 from utils.date_utils import ahora_argentina, format_fecha
 from utils.api_manager import api_manager
@@ -16,9 +17,8 @@ class NotificationManager:
     def __init__(self, sheet_notifications):
         self.sheet = sheet_notifications
         self.max_retries = 3
-        
+
     def _get_next_id(self):
-        """Obtiene el próximo ID disponible con manejo robusto de errores"""
         for _ in range(self.max_retries):
             try:
                 df = safe_get_sheet_data(self.sheet, COLUMNAS_NOTIFICACIONES)
@@ -27,16 +27,12 @@ class NotificationManager:
                 st.error(f"Error al obtener ID: {str(e)}")
                 time.sleep(1)
         return None
-        
+
     def add(self, notification_type, message, user_target='all', claim_id=None, action=None):
-        """
-        Agrega notificaciones (una por usuario si es para todos)
-        """
         if notification_type not in NOTIFICATION_TYPES:
             raise ValueError(f"Tipo de notificación no válido: {notification_type}. Opciones: {list(NOTIFICATION_TYPES.keys())}")
         
         if user_target == 'all':
-            # Verificar que existan usuarios en sesión
             df_usuarios = st.session_state.get('df_usuarios', pd.DataFrame())
             if df_usuarios.empty or 'username' not in df_usuarios.columns:
                 if not st.session_state.get('usuarios_error_mostrado', False):
@@ -47,14 +43,12 @@ class NotificationManager:
             resultados = []
 
             for username in df_usuarios['username'].dropna().unique():
-                # Verificar si tiene más de 10 notificaciones
                 df_notif = safe_get_sheet_data(self.sheet, COLUMNAS_NOTIFICACIONES)
                 user_notifs = df_notif[df_notif['Usuario_Destino'] == username]
                 if len(user_notifs) >= 10:
-                    # Borrar la más antigua (por fecha)
                     user_notifs['Fecha_Hora'] = pd.to_datetime(user_notifs['Fecha_Hora'], errors='coerce')
                     mas_antigua = user_notifs.sort_values('Fecha_Hora').iloc[0]
-                    index = user_notifs.index[0] + 1
+                    index = user_notifs.index[0]
                     self._delete_rows([index])
 
                 success = self._agregar_notificacion_individual(
@@ -70,7 +64,6 @@ class NotificationManager:
             )
 
     def _agregar_notificacion_individual(self, notification_type, message, user_target, claim_id=None, action=None):
-        """Agrega una sola fila de notificación para un usuario"""
         new_id = self._get_next_id()
         if new_id is None:
             return False
@@ -83,7 +76,7 @@ class NotificationManager:
             str(user_target),
             str(claim_id) if claim_id else "",
             format_fecha(ahora_argentina()),
-            False,  # Leída
+            False,
             action or ""
         ]
 
@@ -99,24 +92,15 @@ class NotificationManager:
         st.error(f"Fallo al agregar notificación para {user_target}")
         return False
 
-        
     def get_for_user(self, username, unread_only=True, limit=MAX_NOTIFICATIONS):
-        """
-        Obtiene notificaciones para un usuario con caché local
-        """
         try:
             df = safe_get_sheet_data(self.sheet, COLUMNAS_NOTIFICACIONES)
-
             if df.empty:
                 return []
 
-            # Parseo robusto de fechas
             df['Fecha_Hora'] = pd.to_datetime(df['Fecha_Hora'], errors='coerce')
-
-            # FIX: convertir texto en booleanos
             df['Leída'] = df['Leída'].astype(str).str.strip().str.upper().map({'FALSE': False, 'TRUE': True}).fillna(False)
 
-            # Filtro por usuario y estado
             mask = (df['Usuario_Destino'] == username) | (df['Usuario_Destino'] == 'all')
             if unread_only:
                 mask &= (df['Leída'] == False)
@@ -132,36 +116,26 @@ class NotificationManager:
         except Exception as e:
             st.error(f"Error al obtener notificaciones: {str(e)}")
             return []
-     
+
     def get_unread_count(self, username):
-        """Cuenta rápidamente notificaciones no leídas"""
         notifications = self.get_for_user(username, unread_only=True)
         return len(notifications)
-        
+
     def mark_as_read(self, notification_ids):
-        """
-        Marca notificaciones como leídas en batch
-        
-        Args:
-            notification_ids (list): Lista de IDs a marcar
-        
-        Returns:
-            bool: True si fue exitoso
-        """
         if not notification_ids:
             return False
-            
+
         try:
             df = safe_get_sheet_data(self.sheet, COLUMNAS_NOTIFICACIONES)
 
             updates = [{
-                'range': f"H{int(row['ID']) + 1}",  # Columna 'Leída'
+                'range': f"H{int(row['ID']) + 1}",
                 'values': [[True]]
             } for _, row in df[df['ID'].isin(notification_ids)].iterrows()]
 
             if not updates:
                 return False
-                
+
             success, error = api_manager.safe_sheet_operation(
                 batch_update_sheet,
                 self.sheet,
@@ -169,33 +143,23 @@ class NotificationManager:
                 is_batch=True
             )
             return success
-            
+
         except Exception as e:
             st.error(f"Error al marcar como leídas: {str(e)}")
             return False
-            
+
     def clear_old(self, days=30):
-        """
-        Limpia notificaciones antiguas
-        """
         try:
             df = safe_get_sheet_data(self.sheet, COLUMNAS_NOTIFICACIONES)
             if df.empty:
                 return True
 
-            # Conversión robusta a datetime
             df['Fecha_Hora'] = pd.to_datetime(df['Fecha_Hora'], errors='coerce')
-
-            # Solo des-localizar si la columna tiene zona horaria
             if pd.api.types.is_datetime64tz_dtype(df['Fecha_Hora']):
                 df['Fecha_Hora'] = df['Fecha_Hora'].dt.tz_convert(None)
 
-            # Eliminar NaT para evitar errores de comparación
             df_validas = df[df['Fecha_Hora'].notna()].copy()
-
-            # Comparación con corte
             cutoff_date = ahora_argentina().replace(tzinfo=None) - timedelta(days=days)
-
             old_ids = df_validas[df_validas['Fecha_Hora'] < cutoff_date]['ID'].tolist()
 
             if not old_ids:
@@ -207,41 +171,25 @@ class NotificationManager:
             st.error(f"Error al limpiar notificaciones: {str(e)}")
             return False
 
-            
     def _delete_rows(self, row_ids):
-        """Método interno para eliminar filas (implementar según API)"""
-        # Esto depende de cómo permita tu API eliminar filas
-        # Ejemplo conceptual:
         updates = [{
             'delete_dimension': {
                 'range': {
                     'sheetId': self.sheet.id,
                     'dimension': 'ROWS',
                     'startIndex': int(row_id),
-                    'endIndex': int(row_id)+1
+                    'endIndex': int(row_id) + 1
                 }
             }
         } for row_id in row_ids]
-        
+
         success, _ = api_manager.safe_sheet_operation(
             self.sheet.batch_update,
             {'requests': updates}
         )
         return success
 
-    def init_notification_manager(sheet_notifications):
-        """Inicializa el manager de notificaciones con estado persistente"""
-        if 'notification_manager' not in st.session_state:
-            st.session_state.notification_manager = NotificationManager(sheet_notifications)
-
-            # Verificamos si el usuario ya inició sesión antes de limpiar
-            user = st.session_state.get('auth', {}).get('user_info', {}).get('username', '')
-            if user and st.session_state.get('clear_notifications_job') is None:
-                if st.session_state.notification_manager.clear_old():
-                    st.session_state.clear_notifications_job = True
-                    
     def delete_notification_by_id(self, notif_id):
-        """Elimina una notificación de la hoja por ID"""
         try:
             df = safe_get_sheet_data(self.sheet, COLUMNAS_NOTIFICACIONES)
             fila = df[df['ID'] == notif_id]
@@ -253,3 +201,14 @@ class NotificationManager:
         except Exception as e:
             st.error(f"Error al eliminar notificación: {str(e)}")
             return False
+
+
+# ✅ FUNCIÓN DE INICIALIZACIÓN — DEBE ESTAR FUERA DE LA CLASE
+def init_notification_manager(sheet_notifications):
+    if 'notification_manager' not in st.session_state:
+        st.session_state.notification_manager = NotificationManager(sheet_notifications)
+
+        user = st.session_state.get('auth', {}).get('user_info', {}).get('username', '')
+        if user and st.session_state.get('clear_notifications_job') is None:
+            if st.session_state.notification_manager.clear_old():
+                st.session_state.clear_notifications_job = True
