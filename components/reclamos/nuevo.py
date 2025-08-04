@@ -108,7 +108,7 @@ def render_nuevo_reclamo(df_reclamos, df_clientes, sheet_reclamos, sheet_cliente
 
 def _mostrar_formulario_reclamo(estado, df_clientes, sheet_reclamos, sheet_clientes, current_user):
     """Muestra y procesa el formulario de nuevo reclamo"""
-    with st.form("reclamo_formulario", clear_on_submit=False):
+    with st.form("reclamo_formulario", clear_on_submit=True):
         col1, col2 = st.columns(2)
 
         if estado['cliente_existente']:
