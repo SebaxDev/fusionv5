@@ -89,7 +89,7 @@ OPCIONES_PERMISOS = {
 # --------------------------
 # CONFIGURACIÓN DE LA APLICACIÓN
 # --------------------------
-SECTORES_DISPONIBLES = list(range(1, 18))
+SECTORES_DISPONIBLES = [str(n) for n in range(1, 18)]
 
 TECNICOS_DISPONIBLES = [
     "Braian", "Conejo", "Juan", "Junior", "Maxi", 
