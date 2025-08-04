@@ -277,6 +277,8 @@ user_role = user_info.get('rol', '')
 if 'notification_manager' not in st.session_state:
     init_notification_manager(sheet_notifications)
 
+st.session_state.pop("usuarios_error_mostrado", None)
+
 # --------------------------
 # CONFIGURACIÓN DE PÁGINA
 # --------------------------

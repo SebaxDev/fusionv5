@@ -39,7 +39,9 @@ class NotificationManager:
             # Verificar que existan usuarios en sesión
             df_usuarios = st.session_state.get('df_usuarios', pd.DataFrame())
             if df_usuarios.empty or 'username' not in df_usuarios.columns:
-                st.error("No se pudo obtener la lista de usuarios para generar notificaciones")
+                if not st.session_state.get('usuarios_error_mostrado', False):
+                    st.warning("⚠️ No se pudo obtener la lista de usuarios para generar notificaciones")
+                    st.session_state.usuarios_error_mostrado = True
                 return False
 
             resultados = []
