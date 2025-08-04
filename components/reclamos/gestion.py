@@ -267,12 +267,16 @@ def _mostrar_edicion_reclamo(df, sheet_reclamos):
                     reclamo_actual["Tipo de reclamo"]
                 )
             )
+            try:
+                sector_normalizado = str(int(str(reclamo_actual.get("Sector", "")).strip()))
+                index_sector = SECTORES_DISPONIBLES.index(sector_normalizado) if sector_normalizado in SECTORES_DISPONIBLES else 0
+            except Exception:
+                index_sector = 0
+
             sector_edit = st.selectbox(
                 "Sector",
                 options=SECTORES_DISPONIBLES,
-                index=SECTORES_DISPONIBLES.index(int(reclamo_actual["Sector"])) 
-                if reclamo_actual["Sector"] in [str(s) for s in SECTORES_DISPONIBLES] 
-                else 0
+                index=index_sector
             )
         
         detalles = st.text_area(
