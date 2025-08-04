@@ -32,7 +32,7 @@ def render_notification_bell():
                     st.info("No tienes notificaciones nuevas")
                     return
                 
-                for notification in notifications[:10]:  # Mostrar las 10 más recientes
+                for idx, notification in enumerate(notifications[:10]):  # Mostrar las 10 más recientes
                     icon = NOTIFICATION_TYPES.get(notification.get('Tipo'), {}).get('icon', '✉️')
                     
                     with st.container():
@@ -40,22 +40,22 @@ def render_notification_bell():
                         cols[0].markdown(f"**{icon}**")
                         
                         with cols[1]:
-                            st.markdown(f"**{notification.get('Mensaje', '[Sin mensaje]')}**")
-                            st.caption(format_fecha(notification.get('Fecha_Hora')))
-                            
-                            # Clave única para el botón
-                            notif_id = notification.get("ID")
-                            if notif_id:
-                                key = f"read_{notif_id}"
-                            else:
-                                key = f"read_unknown_{uuid.uuid4()}"
+                            mensaje = notification.get('Mensaje', '[Sin mensaje]')
+                            fecha = format_fecha(notification.get('Fecha_Hora'))
+                            st.markdown(f"**{mensaje}**")
+                            st.caption(fecha)
+
+                            # Generar clave única incluso si hay IDs duplicados o ausentes
+                            notif_id = notification.get("ID", "unknown")
+                            unique_suffix = uuid.uuid4().hex[:8]
+                            key = f"read_{notif_id}_{idx}_{unique_suffix}"
 
                             if st.button("Marcar como leída", key=key):
-                                if notif_id:
+                                if notif_id != "unknown":
                                     st.session_state.notification_manager.mark_as_read([notif_id])
                                     st.cache_data.clear()
                                     st.rerun()
                                 else:
-                                    st.warning("⚠️ No se pudo marcar como leída: la notificación no tiene ID válido.")
-                        
-                        st.divider()
+                                    st.warning("⚠️ Notificación sin ID válida: no se pudo marcar como leída.")
+                    
+                    st.divider()
