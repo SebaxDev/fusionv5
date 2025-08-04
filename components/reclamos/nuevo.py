@@ -113,14 +113,28 @@ def _mostrar_formulario_reclamo(estado, df_clientes, sheet_reclamos, sheet_clien
 
         if estado['cliente_existente']:
             with col1:
-                nombre = st.text_input("👤 Nombre del Cliente", value=estado['cliente_existente'].get("Nombre", ""))
-                direccion = st.text_input("📍 Dirección", value=estado['cliente_existente'].get("Dirección", ""))
+                nombre = st.text_input(
+                    "👤 Nombre del Cliente",
+                    value=estado['cliente_existente'].get("Nombre", "")
+                )
+                direccion = st.text_input(
+                    "📍 Dirección",
+                    value=estado['cliente_existente'].get("Dirección", "")
+                )
+
             with col2:
-                telefono = st.text_input("📞 Teléfono", value=estado['cliente_existente'].get("Teléfono", ""))
-                
-                # Obtener el sector guardado del cliente
-                sector_cliente = str(estado['cliente_existente'].get("Sector", "1")).strip()
-                sector_index = SECTORES_DISPONIBLES.index(sector_cliente) if sector_cliente in SECTORES_DISPONIBLES else 0
+                telefono = st.text_input(
+                    "📞 Teléfono",
+                    value=estado['cliente_existente'].get("Teléfono", "")
+                )
+
+                # ✅ Sector cargado como en gestión de clientes
+                try:
+                    sector_raw = estado['cliente_existente'].get("Sector", "1")
+                    sector_int = int(float(sector_raw))  # Acepta "13", "13.0", etc.
+                    sector_index = SECTORES_DISPONIBLES.index(str(sector_int)) if str(sector_int) in SECTORES_DISPONIBLES else 0
+                except:
+                    sector_index = 0
 
                 sector = st.selectbox(
                     "🔢 Sector (1-17)",
