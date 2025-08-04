@@ -67,19 +67,19 @@ def _mostrar_edicion_cliente(df_clientes, df_reclamos, sheet_clientes):
         col1, col2 = st.columns(2)
         
         with col1:
+            try:
+                sector_normalizado = str(int(str(cliente_actual.get("Sector", "")).strip()))
+                index_sector = SECTORES_DISPONIBLES.index(sector_normalizado) if sector_normalizado in SECTORES_DISPONIBLES else 0
+            except Exception:
+                index_sector = 0
+
             nuevo_sector = st.selectbox(
                 "🔢 Sector (1-17)",
                 options=SECTORES_DISPONIBLES,
-                index=SECTORES_DISPONIBLES.index(int(cliente_actual["Sector"])) 
-                if cliente_actual["Sector"] in [str(s) for s in SECTORES_DISPONIBLES] 
-                else 0,
+                index=index_sector,
                 key="edit_sector"
             )
-            nuevo_nombre = st.text_input(
-                "👤 Nombre", 
-                value=cliente_actual.get("Nombre", "")
-            )
-        
+
         with col2:
             nueva_direccion = st.text_input(
                 "📍 Dirección", 
