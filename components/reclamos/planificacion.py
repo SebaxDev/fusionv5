@@ -40,6 +40,17 @@ def distribuir_por_sector(df_reclamos, grupos_activos):
             asignaciones[grupo].append(r["ID Reclamo"])
     return asignaciones
 
+def _mostrar_asignacion_tecnicos(grupos_activos):
+    """Muestra la interfaz para asignar técnicos a grupos"""
+    st.markdown("### 👷 Asignar técnicos a cada grupo")
+    for grupo in list(st.session_state.tecnicos_grupos.keys())[:grupos_activos]:
+        st.session_state.tecnicos_grupos[grupo] = st.multiselect(
+            f"{grupo} - Técnicos asignados",
+            TECNICOS_DISPONIBLES,
+            default=st.session_state.tecnicos_grupos[grupo],
+            key=f"tecnicos_{grupo}"
+        )
+
 def distribuir_por_tipo(df_reclamos, grupos_activos):
     grupos = GRUPOS_POSIBLES[:grupos_activos]
     asignaciones = {g: [] for g in grupos}
