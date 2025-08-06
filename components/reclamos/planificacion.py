@@ -27,6 +27,14 @@ SECTORES_VECINOS = {
     "Zona 5": ["14", "15", "16", "17"]
 }
 
+ZONAS_COMPATIBLES = {
+    "Zona 1": ["Zona 3", "Zona 5"],
+    "Zona 2": ["Zona 4"],
+    "Zona 3": ["Zona 1", "Zona 2", "Zona 4", "Zona 5"],
+    "Zona 4": ["Zona 2"],
+    "Zona 5": ["Zona 1", "Zona 3"]
+}
+
 def inicializar_estado_grupos():
     if "asignaciones_grupos" not in st.session_state:
         st.session_state.asignaciones_grupos = {g: [] for g in GRUPOS_POSIBLES}
@@ -39,13 +47,34 @@ def inicializar_estado_grupos():
 
 def agrupar_zonas(zonas, grupos):
     """
-    Distribuye zonas equitativamente entre grupos disponibles.
-    Ejemplo: 5 zonas → 2 grupos → [Zona 1,2,3] a Grupo A, [Zona 4,5] a Grupo B
+    Distribuye zonas entre grupos teniendo en cuenta compatibilidad geográfica.
     """
     asignacion = {g: [] for g in grupos}
-    for i, zona in enumerate(zonas):
+    zonas_asignadas = set()
+
+    for g in grupos:
+        # Buscar zona no asignada que tenga menos conflictos
+        for zona in zonas:
+            if zona in zonas_asignadas:
+                continue
+
+            asignacion[g].append(zona)
+            zonas_asignadas.add(zona)
+
+            # Buscar zonas compatibles y asignarlas también (si hay lugar)
+            compatibles = ZONAS_COMPATIBLES.get(zona, [])
+            for comp in compatibles:
+                if comp not in zonas_asignadas and len(asignacion[g]) < len(zonas) // len(grupos) + 1:
+                    asignacion[g].append(comp)
+                    zonas_asignadas.add(comp)
+            break  # Solo una zona base por grupo
+
+    # Si queda alguna zona sin asignar, la distribuimos equitativamente
+    zonas_restantes = [z for z in zonas if z not in zonas_asignadas]
+    for i, zona in enumerate(zonas_restantes):
         grupo = grupos[i % len(grupos)]
         asignacion[grupo].append(zona)
+
     return asignacion
 
 def distribuir_por_sector(df_reclamos, grupos_activos):
