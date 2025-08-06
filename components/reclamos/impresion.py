@@ -73,6 +73,11 @@ def render_impresion_reclamos(df_reclamos, df_clientes, user):
         mensaje_desconexiones = _generar_pdf_desconexiones(df_merged, user if incluir_usuario else None)
         if mensaje_desconexiones:
             result['message'] = mensaje_desconexiones
+            
+        # Impresión En Curso por Técnico
+        mensaje_en_curso = _generar_pdf_en_curso_por_tecnico(df_merged, user if incluir_usuario else None)
+        if mensaje_en_curso:
+            result['message'] = mensaje_en_curso
 
 
     except Exception as e:
@@ -391,5 +396,77 @@ def _generar_pdf_desconexiones(df_merged, usuario=None):
         )
 
         return f"PDF generado con {len(df_desconexiones)} desconexiones pendientes"
+
+    return None
+
+def _generar_pdf_en_curso_por_tecnico(df_merged, usuario=None):
+    """Genera un PDF con reclamos en curso agrupados por técnico"""
+    st.markdown("### 👷 Imprimir reclamos EN CURSO por técnico")
+
+    df_en_curso = df_merged[
+        df_merged["Estado"].astype(str).str.strip().str.lower() == "en curso"
+    ].copy()
+
+    if df_en_curso.empty:
+        st.info("✅ No hay reclamos en curso para imprimir.")
+        return None
+
+    df_en_curso["Atendido por"] = df_en_curso["Atendido por"].fillna("Sin técnico").str.upper()
+    reclamos_por_tecnico = df_en_curso.groupby("Atendido por")
+
+    if st.button("📄 Generar PDF de reclamos en curso por técnico", key="pdf_en_curso_tecnico"):
+        from reportlab.pdfgen import canvas
+        from reportlab.lib.pagesizes import A4
+        import io
+
+        buffer = io.BytesIO()
+        c = canvas.Canvas(buffer, pagesize=A4)
+        width, height = A4
+        y = height - 40
+        hoy = datetime.now().strftime('%d/%m/%Y')
+
+        c.setFont("Helvetica-Bold", 16)
+        c.drawString(40, y, f"RECLAMOS EN CURSO - {hoy}")
+        if usuario:
+            c.setFont("Helvetica", 10)
+            c.drawString(width - 200, y, f"Por: {usuario.get('nombre', 'Sistema')}")
+        y -= 30
+
+        for tecnico, reclamos in reclamos_por_tecnico:
+            if y < 100:
+                agregar_pie_pdf(c, width, height)
+                c.showPage()
+                y = height - 40
+                c.setFont("Helvetica-Bold", 16)
+                c.drawString(40, y, f"RECLAMOS EN CURSO - {hoy}")
+                y -= 30
+
+            c.setFont("Helvetica-Bold", 13)
+            c.drawString(40, y, f"👷 Técnico: {tecnico}")
+            y -= 20
+
+            c.setFont("Helvetica", 11)
+            for _, row in reclamos.iterrows():
+                texto = f"{row['Nº Cliente']} - {row['Tipo de reclamo']} - Sector {row['Sector']}"
+                c.drawString(50, y, texto)
+                y -= 15
+                if y < 60:
+                    agregar_pie_pdf(c, width, height)
+                    c.showPage()
+                    y = height - 40
+
+        agregar_pie_pdf(c, width, height)
+        c.save()
+        buffer.seek(0)
+
+        st.download_button(
+            label="⬇️ Descargar PDF de reclamos en curso",
+            data=buffer,
+            file_name=f"reclamos_en_curso_tecnicos_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
+            mime="application/pdf",
+            help="Reclamos agrupados por técnico"
+        )
+
+        return "PDF generado con reclamos en curso por técnico"
 
     return None
