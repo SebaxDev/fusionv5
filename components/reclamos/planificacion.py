@@ -29,31 +29,40 @@ def inicializar_estado_grupos():
         st.session_state.simulacion_asignaciones = {}
 
 def distribuir_por_sector(df_reclamos, grupos_activos):
+    df_reclamos = df_reclamos[df_reclamos["Estado"] == "Pendiente"].copy()  # <--- agregado
+
     grupos = GRUPOS_POSIBLES[:grupos_activos]
     asignaciones = {g: [] for g in grupos}
     sectores = [str(s) for s in range(1, 18)]
     sector_grupo_map = {s: grupos[i % grupos_activos] for i, s in enumerate(sectores)}
+
     for _, r in df_reclamos.iterrows():
         sector = str(r.get("Sector", "")).strip()
         grupo = sector_grupo_map.get(sector)
         if grupo:
             asignaciones[grupo].append(r["ID Reclamo"])
+
     return asignaciones
 
 def distribuir_por_tipo(df_reclamos, grupos_activos):
+    df_reclamos = df_reclamos[df_reclamos["Estado"] == "Pendiente"].copy()  # <--- agregado
+
     grupos = GRUPOS_POSIBLES[:grupos_activos]
     asignaciones = {g: [] for g in grupos}
     reclamos = df_reclamos.to_dict("records")
     reclamos_por_tipo = {}
+
     for r in reclamos:
         tipo = r.get("Tipo de reclamo", "Otro")
         reclamos_por_tipo.setdefault(tipo, []).append(r["ID Reclamo"])
+
     i = 0
     for tipo, ids in reclamos_por_tipo.items():
         for rid in ids:
             grupo = grupos[i % grupos_activos]
             asignaciones[grupo].append(rid)
             i += 1
+
     return asignaciones
 
 def _mostrar_asignacion_tecnicos(grupos_activos):
@@ -76,7 +85,13 @@ def _mostrar_reclamos_disponibles(df_reclamos, grupos_activos):
     df_reclamos.columns = df_reclamos.columns.str.strip()
     df_reclamos["ID Reclamo"] = df_reclamos["ID Reclamo"].astype(str).str.strip()
     df_reclamos["Fecha y hora"] = pd.to_datetime(df_reclamos["Fecha y hora"], dayfirst=True, errors='coerce')
-    df_reclamos["ID Reclamo"] = df_reclamos["ID Reclamo"].replace('', pd.NA).fillna("temp_" + pd.Series(range(len(df_reclamos))).astype(str))
+    df_reclamos["ID Reclamo"] = df_reclamos["ID Reclamo"].astype(str).str.strip()
+
+    # Verificamos si hay IDs vacíos
+    if df_reclamos["ID Reclamo"].eq("").any():
+        st.error("❌ Hay reclamos con ID vacío. Por favor, corregílos en la hoja antes de continuar.")
+        return None
+
     df_pendientes = df_reclamos[df_reclamos["Estado"] == "Pendiente"].copy()
 
     # Filtros
@@ -103,8 +118,11 @@ def _mostrar_reclamos_disponibles(df_reclamos, grupos_activos):
     asignados = [r for reclamos in st.session_state.asignaciones_grupos.values() for r in reclamos]
     df_disponibles = df_pendientes[~df_pendientes["ID Reclamo"].isin(asignados)]
 
-    for idx, row in df_disponibles.iterrows():
-        with st.container():
+    if df_disponibles.empty:
+        st.info("🎉 No hay reclamos pendientes disponibles.")
+    else:
+        for idx, row in df_disponibles.iterrows():
+            with st.container():
             col1, *cols_grupo = st.columns([4] + [1] * grupos_activos)
             resumen = f"📍 Sector {row['Sector']} - {row['Tipo de reclamo'].capitalize()} - {_format_fecha_reclamo(row['Fecha y hora'])}"
             col1.markdown(f"**{resumen}**")
@@ -184,7 +202,7 @@ def render_planificacion_grupos(df_reclamos, sheet_reclamos, user):
 
                 st.session_state.vista_simulacion = True
                 st.success("✅ Distribución previa generada. Revisala antes de guardar.")
-                st.experimental_rerun()
+                st.rerun()
 
         if st.session_state.get("vista_simulacion"):
             st.subheader("🗂️ Distribución previa de reclamos")
@@ -208,10 +226,14 @@ def render_planificacion_grupos(df_reclamos, sheet_reclamos, user):
                     )
             with col2:
                 if st.button("💾 Confirmar y guardar esta asignación"):
+                    # Limpiar asignaciones actuales
+                    for g in GRUPOS_POSIBLES:
+                        st.session_state.asignaciones_grupos[g] = []
+                        
                     st.session_state.asignaciones_grupos = st.session_state.simulacion_asignaciones
                     st.session_state.vista_simulacion = False
                     st.success("✅ Asignaciones aplicadas.")
-                    st.experimental_rerun()
+                    st.rerun()
 
         if st.button("🔄 Refrescar reclamos"):
             st.cache_data.clear()
