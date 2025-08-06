@@ -442,7 +442,7 @@ def _generar_pdf_en_curso_por_tecnico(df_merged, usuario=None):
                 y -= 30
 
             c.setFont("Helvetica-Bold", 13)
-            c.drawString(40, y, f"👷 Técnico: {tecnico}")
+            c.drawString(40, y, f"👷 Técnico: {tecnico} ({len(reclamos)})")
             y -= 20
 
             c.setFont("Helvetica", 11)
@@ -454,6 +454,11 @@ def _generar_pdf_en_curso_por_tecnico(df_merged, usuario=None):
                     agregar_pie_pdf(c, width, height)
                     c.showPage()
                     y = height - 40
+
+            # Línea divisoria después de los reclamos de cada técnico
+            c.setFont("Helvetica", 10)
+            c.drawString(40, y, "-" * 80)
+            y -= 20
 
         agregar_pie_pdf(c, width, height)
         c.save()
