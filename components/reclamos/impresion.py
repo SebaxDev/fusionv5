@@ -411,8 +411,8 @@ def _generar_pdf_en_curso_por_tecnico(df_merged, usuario=None):
         st.info("✅ No hay reclamos en curso para imprimir.")
         return None
 
-    df_en_curso["Técnico asignado"] = df_en_curso["Técnico asignado"].fillna("Sin técnico").str.upper()
-    reclamos_por_tecnico = df_en_curso.groupby("Técnico asignado")
+    df_en_curso["Técnico"] = df_en_curso["Técnico"].fillna("Sin técnico").str.upper()
+    reclamos_por_tecnico = df_en_curso.groupby("Técnico")
 
     if st.button("📄 Generar PDF de reclamos en curso por técnico", key="pdf_en_curso_tecnico"):
         from reportlab.pdfgen import canvas
