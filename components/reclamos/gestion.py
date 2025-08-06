@@ -412,7 +412,7 @@ def _gestionar_desconexiones(df, sheet_reclamos):
         st.success("✅ No hay desconexiones pendientes de marcar como resueltas.")
         return False
 
-    st.info(f"📄 Hay {len(desconexiones)} desconexiones sin estado cargadas")
+    st.info(f"📄 Hay {len(desconexiones)} desconexiones cargadas ir a Impresion para imprimir listado.")
     
     cambios = False
     

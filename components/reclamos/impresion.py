@@ -68,6 +68,12 @@ def render_impresion_reclamos(df_reclamos, df_clientes, user):
         mensaje_manual = _generar_pdf_manual(df_merged, solo_pendientes, user if incluir_usuario else None)
         if mensaje_manual:
             result['message'] = mensaje_manual
+            
+        # Impresión Desconexiones
+        mensaje_desconexiones = _generar_pdf_desconexiones(df_merged, user if incluir_usuario else None)
+        if mensaje_desconexiones:
+            result['message'] = mensaje_desconexiones
+
 
     except Exception as e:
         st.error(f"❌ Error al generar PDF: {str(e)}")
@@ -373,3 +379,38 @@ def _crear_pdf_reclamos(df_reclamos, titulo, usuario=None):
     c.save()
     buffer.seek(0)
     return buffer
+    
+def _generar_pdf_desconexiones(df_merged, usuario=None):
+    """Genera un PDF con desconexiones a pedido (estado = desconexión)"""
+    st.markdown("### 🔌 Imprimir Desconexiones a Pedido")
+
+    df_desconexiones = df_merged[
+        (df_merged["Tipo de reclamo"].str.strip().str.lower() == "desconexion a pedido") &
+        (df_merged["Estado"].str.strip().str.lower() == "desconexión")
+    ]
+
+    if df_desconexiones.empty:
+        st.info("✅ No hay reclamos de tipo Desconexión a Pedido con estado 'Desconexión'.")
+        return None
+
+    st.success(f"📋 Se encontraron {len(df_desconexiones)} reclamos para desconectar.")
+
+    if st.button("📄 Generar PDF de desconexiones", key="pdf_desconexiones"):
+        buffer = _crear_pdf_reclamos(
+            df_desconexiones, 
+            "LISTADO DE CLIENTES PARA DESCONEXIÓN",
+            usuario
+        )
+        nombre_archivo = f"desconexiones_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+
+        st.download_button(
+            label="⬇️ Descargar PDF de desconexiones",
+            data=buffer,
+            file_name=nombre_archivo,
+            mime="application/pdf",
+            help=f"Descargar {len(df_desconexiones)} reclamos de desconexión"
+        )
+
+        return f"PDF generado con {len(df_desconexiones)} desconexiones pendientes"
+
+    return None
