@@ -300,81 +300,60 @@ def _generar_pdf_manual(df_merged, solo_pendientes, usuario=None):
     return None
 
 def _crear_pdf_reclamos(df_reclamos, titulo, usuario=None):
-    """
-    Crea un PDF con los reclamos seleccionados
-    
-    Args:
-        df_reclamos (pd.DataFrame): DataFrame con los reclamos a imprimir
-        titulo (str): Título principal del documento
-        usuario (dict, optional): Información del usuario que genera el PDF
-        
-    Returns:
-        io.BytesIO: Buffer con el PDF generado
-    """
+    import io
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.pagesizes import A4
+    from utils.pdf_utils import agregar_pie_pdf
+    from datetime import datetime
+
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
     y = height - 40
     hoy = datetime.now().strftime('%d/%m/%Y %H:%M')
 
-    # Encabezado del documento
+    # Encabezado
     c.setFont("Helvetica-Bold", 16)
     c.drawString(40, y, titulo)
     y -= 20
-    
+
     c.setFont("Helvetica", 12)
     c.drawString(40, y, f"Generado el: {hoy}")
     if usuario:
-        c.drawString(width - 150, y, f"Por: {usuario.get('nombre', 'Sistema')}")
+        c.drawString(width - 200, y, f"Por: {usuario.get('nombre', 'Sistema')}")
     y -= 30
 
-    # Contenido de los reclamos
-    for i, (_, reclamo) in enumerate(df_reclamos.iterrows()):
-        # Encabezado del reclamo
+    for _, reclamo in df_reclamos.iterrows():
+        if y < 120:
+            agregar_pie_pdf(c, width, height)
+            c.showPage()
+            y = height - 40
+            c.setFont("Helvetica-Bold", 16)
+            c.drawString(40, y, titulo + " (cont.)")
+            y -= 30
+
         c.setFont("Helvetica-Bold", 14)
-        cliente_line = f"#{reclamo['Nº Cliente']} - {reclamo['Nombre']} (Sector {reclamo['Sector']})"
-        c.drawString(40, y, cliente_line)
-        y -= 18
-        
-        # Detalles del reclamo
-        c.setFont("Helvetica", 11)
-        
-        fecha_pdf = format_fecha(reclamo['Fecha y hora'], '%d/%m/%Y %H:%M') if not pd.isna(reclamo['Fecha y hora']) else 'Sin fecha'
-        lineas = [
-            f"Fecha: {fecha_pdf}",
-            f"Dirección: {reclamo['Dirección']}",
-            f"Contacto: {reclamo['Teléfono']}",
-            f"Precinto: {reclamo.get('N° de Precinto', 'N/A')}",
-            f"Tipo: {reclamo['Tipo de reclamo']}",
-        ]
-        
-        # Detalles con manejo de texto largo
-        detalles = reclamo['Detalles']
-        if len(detalles) > 150:
-            lineas.append(f"Detalles: {detalles[:150]}...")
-        else:
-            lineas.append(f"Detalles: {detalles}")
-
-        # Dibujar cada línea
-        for linea in lineas:
-            if y < 100:  # Salto de página si queda poco espacio
-                agregar_pie_pdf(c, width, height)
-                c.showPage()
-                y = height - 40
-                c.setFont("Helvetica-Bold", 14)
-                c.drawString(40, y, f"{titulo} (cont.)")
-                y -= 30
-                c.setFont("Helvetica", 11)
-            
-            c.drawString(40, y, linea)
-            y -= 14
-
-        # Separador entre reclamos
-        y -= 10
-        c.line(40, y, width-40, y)
+        c.drawString(40, y, f"{reclamo['Nº Cliente']} - {reclamo['Nombre']}")
         y -= 15
 
-    # Pie de página final
+        c.setFont("Helvetica", 11)
+        fecha_pdf = reclamo['Fecha y hora'].strftime('%d/%m/%Y %H:%M') if not pd.isna(reclamo['Fecha y hora']) else 'Sin fecha'
+        lineas = [
+            f"Fecha: {fecha_pdf}",
+            f"Dirección: {reclamo['Dirección']} - Tel: {reclamo['Teléfono']}",
+            f"Sector: {reclamo['Sector']} - Precinto: {reclamo.get('N° de Precinto') or 'N/A'}",
+            f"Tipo: {reclamo['Tipo de reclamo']}",
+            f"Detalles: {reclamo['Detalles'][:100]}..." if len(reclamo['Detalles']) > 100 else f"Detalles: {reclamo['Detalles']}"
+        ]
+
+        for linea in lineas:
+            c.drawString(40, y, linea)
+            y -= 12
+
+        y -= 5
+        c.line(40, y, width - 40, y)
+        y -= 15
+
     agregar_pie_pdf(c, width, height)
     c.save()
     buffer.seek(0)
