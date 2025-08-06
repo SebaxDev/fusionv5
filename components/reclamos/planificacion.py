@@ -18,6 +18,15 @@ from config.settings import (
 
 GRUPOS_POSIBLES = [f"Grupo {letra}" for letra in "ABCDE"]
 
+# Mapeo de sectores cercanos por zona
+SECTORES_VECINOS = {
+    "Zona 1": ["1", "2", "3", "4"],
+    "Zona 2": ["5", "6", "7", "8"],
+    "Zona 3": ["9", "10"],
+    "Zona 4": ["11", "12", "13"],
+    "Zona 5": ["14", "15", "16", "17"]
+}
+
 def inicializar_estado_grupos():
     if "asignaciones_grupos" not in st.session_state:
         st.session_state.asignaciones_grupos = {g: [] for g in GRUPOS_POSIBLES}
@@ -28,14 +37,39 @@ def inicializar_estado_grupos():
     if "simulacion_asignaciones" not in st.session_state:
         st.session_state.simulacion_asignaciones = {}
 
-def distribuir_por_sector(df_reclamos, grupos_activos):
-    df_reclamos = df_reclamos[df_reclamos["Estado"] == "Pendiente"].copy()  # <--- agregado
+def agrupar_zonas(zonas, grupos):
+    """
+    Distribuye zonas equitativamente entre grupos disponibles.
+    Ejemplo: 5 zonas → 2 grupos → [Zona 1,2,3] a Grupo A, [Zona 4,5] a Grupo B
+    """
+    asignacion = {g: [] for g in grupos}
+    for i, zona in enumerate(zonas):
+        grupo = grupos[i % len(grupos)]
+        asignacion[grupo].append(zona)
+    return asignacion
 
+def distribuir_por_sector(df_reclamos, grupos_activos):
+    """
+    Distribuye reclamos basándose en zonas cercanas definidas por SECTORES_VECINOS.
+    Asocia zonas a grupos equilibradamente.
+    """
+    df_reclamos = df_reclamos[df_reclamos["Estado"] == "Pendiente"].copy()
     grupos = GRUPOS_POSIBLES[:grupos_activos]
     asignaciones = {g: [] for g in grupos}
-    sectores = [str(s) for s in range(1, 18)]
-    sector_grupo_map = {s: grupos[i % grupos_activos] for i, s in enumerate(sectores)}
 
+    zonas = list(SECTORES_VECINOS.keys())
+
+    # Distribuir zonas entre grupos
+    zonas_por_grupo = agrupar_zonas(zonas, grupos)
+
+    # Crear mapa: sector → grupo
+    sector_grupo_map = {}
+    for grupo, zonas_asignadas in zonas_por_grupo.items():
+        for zona in zonas_asignadas:
+            for sector in SECTORES_VECINOS[zona]:
+                sector_grupo_map[sector] = grupo
+
+    # Asignar reclamos según el grupo de su sector
     for _, r in df_reclamos.iterrows():
         sector = str(r.get("Sector", "")).strip()
         grupo = sector_grupo_map.get(sector)
@@ -197,12 +231,21 @@ def render_planificacion_grupos(df_reclamos, sheet_reclamos, user):
             if st.button("⚙️ Distribuir reclamos ahora"):
                 if modo_distribucion == "Automática por sector":
                     st.session_state.simulacion_asignaciones = distribuir_por_sector(df_reclamos, grupos_activos)
+
+                    # Mostrar zonas asignadas por grupo (distribución por sector)
+                    zonas_por_grupo = agrupar_zonas(
+                        list(SECTORES_VECINOS.keys()),
+                        GRUPOS_POSIBLES[:grupos_activos]
+                    )
+                    st.markdown("### 🗺️ Zonas asignadas por grupo:")
+                    for grupo, zonas_asignadas in zonas_por_grupo.items():
+                        st.markdown(f"- **{grupo}** cubre: {', '.join(zonas_asignadas)}")
+
                 else:
                     st.session_state.simulacion_asignaciones = distribuir_por_tipo(df_reclamos, grupos_activos)
 
                 st.session_state.vista_simulacion = True
                 st.success("✅ Distribución previa generada. Revisala antes de guardar.")
-                st.rerun()
 
         if st.session_state.get("vista_simulacion"):
             st.subheader("🗂️ Distribución previa de reclamos")
