@@ -92,7 +92,7 @@ def _mostrar_reclamos_disponibles(df_reclamos, grupos_activos):
         st.error("❌ Hay reclamos con ID vacío. Por favor, corregílos en la hoja antes de continuar.")
         return None
 
-        df_pendientes = df_reclamos[df_reclamos["Estado"] == "Pendiente"].copy()
+    df_pendientes = df_reclamos[df_reclamos["Estado"] == "Pendiente"].copy()
 
     # Filtros
     col1, col2 = st.columns(2)
