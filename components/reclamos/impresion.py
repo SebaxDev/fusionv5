@@ -401,7 +401,7 @@ def _generar_pdf_desconexiones(df_merged, usuario=None):
 
 def _generar_pdf_en_curso_por_tecnico(df_merged, usuario=None):
     """Genera un PDF con reclamos en curso agrupados por técnico"""
-    st.markdown("### 👷 Imprimir reclamos EN CURSO por técnico")
+    st.markdown("### 👷 Imprimir reclamos EN CURSO")
 
     df_en_curso = df_merged[
         df_merged["Estado"].astype(str).str.strip().str.lower() == "en curso"
@@ -411,8 +411,8 @@ def _generar_pdf_en_curso_por_tecnico(df_merged, usuario=None):
         st.info("✅ No hay reclamos en curso para imprimir.")
         return None
 
-    df_en_curso["Atendido por"] = df_en_curso["Atendido por"].fillna("Sin técnico").str.upper()
-    reclamos_por_tecnico = df_en_curso.groupby("Atendido por")
+    df_en_curso["Técnico asignado"] = df_en_curso["Técnico asignado"].fillna("Sin técnico").str.upper()
+    reclamos_por_tecnico = df_en_curso.groupby("Técnico asignado")
 
     if st.button("📄 Generar PDF de reclamos en curso por técnico", key="pdf_en_curso_tecnico"):
         from reportlab.pdfgen import canvas
