@@ -123,9 +123,9 @@ def _mostrar_reclamos_disponibles(df_reclamos, grupos_activos):
     else:
         for idx, row in df_disponibles.iterrows():
             with st.container():
-            col1, *cols_grupo = st.columns([4] + [1] * grupos_activos)
-            resumen = f"📍 Sector {row['Sector']} - {row['Tipo de reclamo'].capitalize()} - {_format_fecha_reclamo(row['Fecha y hora'])}"
-            col1.markdown(f"**{resumen}**")
+                col1, *cols_grupo = st.columns([4] + [1] * grupos_activos)
+                resumen = f"📍 Sector {row['Sector']} - {row['Tipo de reclamo'].capitalize()} - {_format_fecha_reclamo(row['Fecha y hora'])}"
+                col1.markdown(f"**{resumen}**")
 
             for i, grupo in enumerate(GRUPOS_POSIBLES[:grupos_activos]):
                 tecnicos = st.session_state.tecnicos_grupos[grupo]
