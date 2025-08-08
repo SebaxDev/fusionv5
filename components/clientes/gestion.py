@@ -85,8 +85,21 @@ def _mostrar_edicion_cliente(df_clientes, df_reclamos, sheet_clientes):
         submitted = st.form_submit_button("💾 Guardar cambios")
 
     if submitted:
+        # Verificar si hubo cambios
+        hubo_cambios = any([
+            str(nuevo_sector) != str(cliente_actual.get("Sector", "")),
+            str(nuevo_nombre) != str(cliente_actual.get("Nombre", "")),
+            str(nueva_direccion) != str(cliente_actual.get("Dirección", "")),
+            str(nuevo_telefono) != str(cliente_actual.get("Teléfono", "")),
+            str(nuevo_precinto) != str(cliente_actual.get("N° de Precinto", ""))
+        ])
+
+        if not hubo_cambios:
+            st.info("ℹ️ No se detectaron cambios en los datos del cliente.")
+            return cambios
+
         cambios = _actualizar_cliente(
-            cliente_actual,
+            df_clientes[df_clientes["Nº Cliente"].astype(str) == str(cliente_seleccionado)],
             sheet_clientes,
             nuevo_sector,
             nuevo_nombre,
@@ -97,8 +110,6 @@ def _mostrar_edicion_cliente(df_clientes, df_reclamos, sheet_clientes):
 
         if cambios:
             st.success(f"✅ Cliente {cliente_seleccionado} actualizado correctamente")
-        else:
-            st.info("ℹ️ No se realizaron cambios en el cliente seleccionado")
 
     return cambios
 
@@ -153,14 +164,16 @@ def _actualizar_cliente(cliente_row, sheet_clientes, nuevo_sector, nuevo_nombre,
     """Actualiza los datos del cliente en la hoja de cálculo"""
     with st.spinner("Actualizando cliente..."):
         try:
-            index = cliente_row.index[0] + 2
+            # Nos aseguramos que el índice sea numérico y válido para Google Sheets
+            index = int(cliente_row.index[0]) + 2
 
+            # Convertimos todos los valores a string para evitar problemas
             updates = [
                 {"range": f"B{index}", "values": [[str(nuevo_sector)]]},
-                {"range": f"C{index}", "values": [[nuevo_nombre.upper()]]},
-                {"range": f"D{index}", "values": [[nueva_direccion.upper()]]},
-                {"range": f"E{index}", "values": [[nuevo_telefono]]},
-                {"range": f"F{index}", "values": [[nuevo_precinto]]},
+                {"range": f"C{index}", "values": [[str(nuevo_nombre).upper()]]},
+                {"range": f"D{index}", "values": [[str(nueva_direccion).upper()]]},
+                {"range": f"E{index}", "values": [[str(nuevo_telefono)]]},
+                {"range": f"F{index}", "values": [[str(nuevo_precinto)]]},
                 {"range": f"H{index}", "values": [[format_fecha(ahora_argentina())]]}
             ]
 
@@ -175,7 +188,9 @@ def _actualizar_cliente(cliente_row, sheet_clientes, nuevo_sector, nuevo_nombre,
                 st.success("✅ Cliente actualizado correctamente.")
                 
                 if 'notification_manager' in st.session_state:
-                    mensaje = f"✏️ Se actualizaron los datos del cliente N° {cliente_row.iloc[0]['Nº Cliente']} - {nuevo_nombre.upper()}."
+                    num_cliente = str(cliente_row.iloc[0]['Nº Cliente'])
+                    nombre_cliente = str(nuevo_nombre).upper()
+                    mensaje = f"✏️ Se actualizaron los datos del cliente N° {num_cliente} - {nombre_cliente}."
                     st.session_state.notification_manager.add(
                         notification_type="cliente_actualizado",
                         message=mensaje,
@@ -253,7 +268,7 @@ def _guardar_nuevo_cliente(df_clientes, sheet_clientes, nuevo_nro, nuevo_sector,
         st.error("⚠️ Debés ingresar nombre y dirección.")
         return False
     
-    if nuevo_nro and nuevo_nro in df_clientes["Nº Cliente"].values:
+    if nuevo_nro and str(nuevo_nro) in df_clientes["Nº Cliente"].astype(str).values:
         st.warning("⚠️ Este cliente ya existe.")
         return False
 
