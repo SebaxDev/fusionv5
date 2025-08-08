@@ -1,27 +1,22 @@
 """
-Estilos CSS refinados para diseño más profesional y compacto
+Estilos CSS refinados - Tema Monokai Classic
+Aplicado como modo oscuro por defecto
 """
 
 def get_main_styles(dark_mode=False):
-    """Devuelve estilos CSS refinados y más compactos"""
+    """Devuelve estilos CSS refinados con paleta Monokai"""
+    # Ignoramos el parámetro dark_mode y forzamos Monokai como base
     theme_vars = """
-        --primary-color: #4361ee;
-        --secondary-color: #7209b7;
-        --accent-color: #3a0ca3;
-        --text-color: #212529;
-        --bg-color: #f8f9fa;
-        --card-bg: #ffffff;
-        --border-color: #e9ecef;
-        --shadow: 0 2px 8px rgba(0,0,0,0.08);
-    """ if not dark_mode else """
-        --primary-color: #4895ef;
-        --secondary-color: #b5179e;
-        --accent-color: #560bad;
-        --text-color: #f8f9fa;
-        --bg-color: #121212;
-        --card-bg: #1e1e1e;
-        --border-color: #2d3748;
-        --shadow: 0 2px 8px rgba(0,0,0,0.3);
+        --primary-color: #66D9EF;     /* Azul verdoso */
+        --secondary-color: #F92672;   /* Magenta */
+        --accent-color: #E6DB74;      /* Amarillo */
+        --text-color: #F8F8F2;        /* Blanco cálido */
+        --bg-color: #272822;          /* Fondo principal */
+        --card-bg: #3E3D32;           /* Fondo de tarjetas */
+        --border-color: #49483E;      /* Bordes */
+        --shadow: 0 2px 8px rgba(0,0,0,0.4);
+        --green-color: #A6E22E;
+        --orange-color: #FD971F;
     """
     
     return f"""
@@ -33,9 +28,9 @@ def get_main_styles(dark_mode=False):
         --top-margin: 1.5rem;
     }}
 
-    /* Contenedor principal */
+    /* Fuente global */
     body, .block-container {{
-        font-family: 'Segoe UI', Roboto, -apple-system, sans-serif;
+        font-family: 'Fira Code', 'Segoe UI', Roboto, -apple-system, sans-serif;
         background-color: var(--bg-color);
         color: var(--text-color);
         line-height: 1.6;
@@ -54,6 +49,8 @@ def get_main_styles(dark_mode=False):
         color: var(--primary-color);
         margin-top: 1.2rem;
         margin-bottom: 0.8rem;
+        font-weight: 600;
+        letter-spacing: 0.5px;
     }}
 
     /* Formularios */
@@ -73,15 +70,15 @@ def get_main_styles(dark_mode=False):
     .stTextArea textarea:focus, 
     .stSelectbox select:focus {{
         border-color: var(--primary-color);
-        box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.15);
+        box-shadow: 0 0 0 2px rgba(102, 217, 239, 0.25);
         outline: none;
     }}
 
     /* Botones */
     .stButton>button {{
         border-radius: var(--border-radius);
-        background-color: var(--primary-color);
-        color: white;
+        background-color: var(--secondary-color);
+        color: var(--text-color);
         padding: 8px 16px;
         border: none;
         font-weight: 500;
@@ -90,7 +87,8 @@ def get_main_styles(dark_mode=False):
     }}
 
     .stButton>button:hover {{
-        background-color: var(--accent-color);
+        background-color: var(--primary-color);
+        color: #272822;
         transform: translateY(-1px);
         box-shadow: var(--shadow);
     }}
@@ -115,9 +113,18 @@ def get_main_styles(dark_mode=False):
     }}
 
     .dataframe thead th {{
-        background-color: var(--primary-color);
+        background-color: var(--secondary-color);
         color: white;
         font-weight: 600;
+    }}
+
+    .dataframe tbody td {{
+        background-color: var(--card-bg);
+        color: var(--text-color);
+    }}
+
+    .dataframe tbody tr:hover td {{
+        background-color: #4E4C3A;
     }}
 
     /* Sidebar */
@@ -127,12 +134,34 @@ def get_main_styles(dark_mode=False):
         border-right: 1px solid var(--border-color);
     }}
 
+    /* Links */
+    a {{
+        color: var(--primary-color);
+        text-decoration: none;
+    }}
+    a:hover {{
+        color: var(--accent-color);
+    }}
+
     /* Hover general */
     .element-container:has(button):hover,
     .stCheckbox:hover,
     .stRadio:hover {{
         transform: translateY(-1px);
         transition: all 0.2s ease;
+    }}
+
+    /* Colores especiales para avisos */
+    .stAlert div[data-baseweb="notification"] {{
+        background-color: var(--card-bg);
+        border-left: 5px solid var(--secondary-color);
+        color: var(--text-color);
+    }}
+    .stAlert[data-baseweb="notification"][role="alert"] {{
+        border-left-color: var(--orange-color);
+    }}
+    .stAlert[data-baseweb="notification"][role="status"] {{
+        border-left-color: var(--green-color);
     }}
 
     /* Responsive */
@@ -154,7 +183,7 @@ def get_main_styles(dark_mode=False):
     """
 
 def get_loading_spinner():
-    """Spinner moderno y elegante"""
+    """Spinner con colores Monokai"""
     return """
     <div style="
         position: fixed;
@@ -174,7 +203,7 @@ def get_loading_spinner():
             height: 50px;
             border: 4px solid rgba(255,255,255,0.2);
             border-radius: 50%;
-            border-top-color: var(--primary-color);
+            border-top-color: var(--secondary-color);
             animation: spin 1s ease-in-out infinite;
             position: relative;
         ">
@@ -187,7 +216,7 @@ def get_loading_spinner():
                 bottom: -4px;
                 border: 4px solid transparent;
                 border-radius: 50%;
-                border-top-color: var(--secondary-color);
+                border-top-color: var(--primary-color);
                 animation: spin 1.5s ease infinite;
                 opacity: 0.7;
             "></div>
