@@ -33,7 +33,10 @@ def render_gestion_clientes(df_clientes, df_reclamos, sheet_clientes, user_role)
         st.warning("🔒 Solo los administradores pueden editar información de clientes")
 
     st.markdown('</div>', unsafe_allow_html=True)
-    return cambios
+    return {
+    "cambios": cambios,
+    "needs_refresh": cambios
+    }
 
 def _mostrar_edicion_cliente(df_clientes, df_reclamos, sheet_clientes):
     """Muestra el formulario para editar un cliente existente"""
