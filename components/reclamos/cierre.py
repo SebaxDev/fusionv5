@@ -296,7 +296,7 @@ def _cerrar_reclamo(row, nuevo_precinto, precinto_actual, cliente_info, sheet_re
     """Maneja el cierre de un reclamo, devuelve True si hubo cambios"""
     try:
         mostrar_overlay_cargando("Cerrando reclamo...")
-        time.sleep(3)  # para que el usuario perciba el efecto
+        time.sleep(2)  # para que el usuario perciba el efecto
 
         fila_index = row.name + 2
         updates = [{"range": f"I{fila_index}", "values": [["Resuelto"]]}]
@@ -344,7 +344,7 @@ def _volver_a_pendiente(row, sheet_reclamos):
     """Devuelve un reclamo a estado pendiente, devuelve True si hubo cambios"""
     try:
         mostrar_overlay_cargando("Cambiando estado...")
-        time.sleep(3)  # para que el usuario perciba el efecto
+        time.sleep(2)  # para que el usuario perciba el efecto
 
         fila_index = row.name + 2
         updates = [
