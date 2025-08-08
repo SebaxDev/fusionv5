@@ -440,6 +440,7 @@ st.session_state.df_usuarios = df_usuarios
 # INTERFAZ PRINCIPAL OPTIMIZADA
 # --------------------------
 
+st.markdown("---")
 st.markdown("""
 <div style="text-align: center;">
     <h1 style="margin:0; margin-bottom:0.5rem;">
