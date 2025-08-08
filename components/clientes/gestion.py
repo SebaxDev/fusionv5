@@ -36,92 +36,69 @@ def render_gestion_clientes(df_clientes, df_reclamos, sheet_clientes, user_role)
     return cambios
 
 def _mostrar_edicion_cliente(df_clientes, df_reclamos, sheet_clientes):
-    """Muestra la interfaz para editar clientes existentes"""
-    st.markdown("### ✏️ Editar datos de un cliente")
-
-    # Preparar datos para el selector
-    df_clientes["label"] = df_clientes.apply(
-        lambda row: f"{row['Nº Cliente']} - {row['Nombre']} - Sector {row.get('Sector', '')}",
-        axis=1
-    )
-    
-    seleccion_cliente = st.selectbox(
-        "🔎 Seleccioná un cliente para editar",
-        options=[""] + df_clientes["label"].tolist(),
-        index=0
-    )
-
-    if not seleccion_cliente:
-        return False
-
-    nro_cliente = seleccion_cliente.split(" - ")[0].strip()
-    cliente_row = df_clientes[df_clientes["Nº Cliente"] == nro_cliente]
-
-    if cliente_row.empty:
-        return False
-
-    cliente_actual = cliente_row.iloc[0]
+    """Muestra el formulario para editar un cliente existente"""
     cambios = False
 
-    with st.form("editar_cliente_form"):
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            try:
-                sector_normalizado = str(int(str(cliente_actual.get("Sector", "")).strip()))
-                index_sector = SECTORES_DISPONIBLES.index(sector_normalizado) if sector_normalizado in SECTORES_DISPONIBLES else 0
-            except Exception:
-                index_sector = 0
+    # Selección del cliente
+    clientes_lista = df_clientes["Nº Cliente"].astype(str).tolist()
+    cliente_seleccionado = st.selectbox("🔍 Seleccionar cliente", clientes_lista)
 
+    if not cliente_seleccionado:
+        return cambios
+
+    # Datos actuales del cliente
+    cliente_actual = df_clientes[df_clientes["Nº Cliente"].astype(str) == str(cliente_seleccionado)].iloc[0]
+
+    # Formulario de edición
+    with st.form("form_editar_cliente"):
+        col1, col2 = st.columns(2)
+
+        with col1:
             nuevo_sector = st.selectbox(
-                "🔢 Sector (1-17)",
-                options=SECTORES_DISPONIBLES,
-                index=index_sector,
-                key="edit_sector"
+                "🏢 Sector",
+                SECTORES_DISPONIBLES,
+                index=SECTORES_DISPONIBLES.index(cliente_actual.get("Sector", SECTORES_DISPONIBLES[0]))
+                if cliente_actual.get("Sector") in SECTORES_DISPONIBLES else 0
+            )
+
+            nuevo_nombre = st.text_input(
+                "👤 Nombre",
+                value=cliente_actual.get("Nombre", "")
+            )
+
+            nueva_direccion = st.text_input(
+                "📍 Dirección",
+                value=cliente_actual.get("Dirección", "")
             )
 
         with col2:
-            nueva_direccion = st.text_input(
-                "📍 Dirección", 
-                value=cliente_actual.get("Dirección", "")
-            )
             nuevo_telefono = st.text_input(
-                "📞 Teléfono", 
+                "📞 Teléfono",
                 value=cliente_actual.get("Teléfono", "")
             )
 
-        nuevo_precinto = st.text_input(
-            "🔒 N° de Precinto", 
-            value=cliente_actual.get("N° de Precinto", ""),
-            help="Número de precinto del medidor"
-        )
+            nuevo_precinto = st.text_input(
+                "🔒 Nº de Precinto",
+                value=cliente_actual.get("N° de Precinto", "")
+            )
 
-        st.text_input(
-            "🆔 ID Cliente", 
-            value=cliente_actual.get("ID Cliente", "N/A"), 
-            disabled=True
-        )
+        submitted = st.form_submit_button("💾 Guardar cambios")
 
-        # Mostrar últimos reclamos del cliente
-        cambios = _mostrar_reclamos_cliente(nro_cliente, df_reclamos) or cambios
-
-        # Verificar cambios desde reclamos
-        cambios_detectados = _verificar_cambios_desde_reclamos(
-            nro_cliente, df_reclamos, 
-            nueva_direccion, nuevo_telefono, nuevo_precinto
-        )
-
-        actualizar = st.form_submit_button(
-            "💾 Actualizar datos del cliente", 
-            use_container_width=True
-        )
-
-    if actualizar:
+    if submitted:
         cambios = _actualizar_cliente(
-            cliente_row, sheet_clientes,
-            nuevo_sector, nuevo_nombre, nueva_direccion,
-            nuevo_telefono, nuevo_precinto
+            cliente_actual,
+            sheet_clientes,
+            nuevo_sector,
+            nuevo_nombre,
+            nueva_direccion,
+            nuevo_telefono,
+            nuevo_precinto
         )
+
+        if cambios:
+            st.success(f"✅ Cliente {cliente_seleccionado} actualizado correctamente")
+        else:
+            st.info("ℹ️ No se realizaron cambios en el cliente seleccionado")
 
     return cambios
 
