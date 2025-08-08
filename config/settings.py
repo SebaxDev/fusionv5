@@ -48,7 +48,7 @@ COLUMNAS_CLIENTES = [
 ]
 
 COLUMNAS_USUARIOS = [  # Nueva estructura para usuarios
-    "username", "password", "nombre", "rol", "activo"
+    "username", "password", "nombre", "rol", "activo", "modo_oscuro"
 ]
 
 # --------------------------

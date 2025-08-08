@@ -8,6 +8,7 @@ import io
 import json
 import time
 from datetime import datetime
+import logging
 
 # Third-party
 import pandas as pd
@@ -75,30 +76,76 @@ def generar_id_unico():
 def is_system_dark_mode():
     """Intenta detectar si el sistema está en modo oscuro"""
     try:
-        import streamlit as st
         from streamlit.runtime.scriptrunner import get_script_run_ctx
-        
         ctx = get_script_run_ctx()
         if ctx is None:
             return False
-            
-        # Esto es una aproximación - Streamlit no expone directamente esta información
-        # Puedes cambiarlo por una preferencia del usuario guardada en session_state
         return st.session_state.get('modo_oscuro', False)
     except:
         return False
 
+# --- 🔹 Funciones nuevas para persistencia de modo oscuro ---
+MODO_OSCURO_KEY = "modo_oscuro"
+
+def _coerce_bool(val):
+    if isinstance(val, bool):
+        return val
+    if pd.isna(val):
+        return False
+    return str(val).strip().lower() in ("true", "verdadero", "si", "sí", "1", "yes", "y")
+
+def init_modo_oscuro():
+    """Inicializa st.session_state[MODO_OSCURO_KEY] desde df_usuarios si existe."""
+    if MODO_OSCURO_KEY in st.session_state:
+        return
+    modo = is_system_dark_mode()
+    df = st.session_state.get("df_usuarios")
+    user_email = st.session_state.auth.get("user_info", {}).get("email")
+    if df is not None and not df.empty and user_email:
+        if "modo_oscuro" in df.columns:
+            row = df[df["Email"] == user_email] if "Email" in df.columns else None
+            if row is not None and not row.empty:
+                modo = _coerce_bool(row.iloc[0].get("modo_oscuro", modo))
+    st.session_state[MODO_OSCURO_KEY] = modo
+
+def persist_modo_oscuro(new_value: bool):
+    """Guarda la preferencia en sheet_usuarios."""
+    df = st.session_state.get("df_usuarios")
+    user_email = st.session_state.auth.get("user_info", {}).get("email")
+    if df is None or not user_email:
+        return False
+    if "Email" in df.columns:
+        row_index = df.index[df["Email"] == user_email]
+        if not row_index.empty:
+            idx = int(row_index[0])
+            col_idx = df.columns.get_loc("modo_oscuro") if "modo_oscuro" in df.columns else None
+            if col_idx is None:
+                return False
+            try:
+                def _op(ws):
+                    ws.update_cell(idx + 2, col_idx + 1, "TRUE" if new_value else "FALSE")
+                api_manager.safe_sheet_operation(sheet_usuarios, _op)
+                return True
+            except Exception as e:
+                logging.exception("Error persistiendo modo oscuro")
+    return False
+
+def _on_toggle_modo_oscuro():
+    val = st.session_state.get(MODO_OSCURO_KEY, False)
+    if persist_modo_oscuro(val):
+        st.toast("Preferencia guardada ✅") if hasattr(st, "toast") else st.success("Preferencia guardada")
+    else:
+        st.info("Preferencia guardada solo en esta sesión")
+
+# ------------------------------------------------------------
+
 def is_mobile():
     """Detecta si la aplicación se está ejecutando en un dispositivo móvil"""
-    # Puedes usar la biblioteca streamlit para detectar el user agent
-    from streamlit import runtime
     from streamlit.runtime.scriptrunner import get_script_run_ctx
-    
     try:
         ctx = get_script_run_ctx()
         if ctx is None:
             return False
-            
         user_agent = ctx.request.headers.get("User-Agent", "").lower()
         mobile_keywords = ['mobi', 'android', 'iphone', 'ipad', 'ipod', 'blackberry', 'windows phone']
         return any(keyword in user_agent for keyword in mobile_keywords)
@@ -216,7 +263,6 @@ def migrar_uuids_existentes(sheet_reclamos, sheet_clientes):
 # --------------------------
 # CONEXIÓN CON GOOGLE SHEETS
 # --------------------------
-
 @st.cache_resource(ttl=3600)
 def init_google_sheets():
     """Conexión optimizada a Google Sheets con retry automático"""
@@ -228,15 +274,13 @@ def init_google_sheets():
         )
         client = gspread.authorize(creds)
         sheet_notifications = client.open_by_key(SHEET_ID).worksheet(WORKSHEET_NOTIFICACIONES)
-        init_notification_manager(sheet_notifications)  # Inicializamos el gestor de notificaciones
-        
+        init_notification_manager(sheet_notifications)
         return (
             client.open_by_key(SHEET_ID).worksheet(WORKSHEET_RECLAMOS),
             client.open_by_key(SHEET_ID).worksheet(WORKSHEET_CLIENTES),
             client.open_by_key(SHEET_ID).worksheet(WORKSHEET_USUARIOS),
-            sheet_notifications  # Retornamos también la hoja de notificaciones
+            sheet_notifications
         )
-    
     try:
         return _connect()
     except Exception as e:
@@ -244,13 +288,11 @@ def init_google_sheets():
         st.stop()
 
 def precache_all_data(sheet_reclamos, sheet_clientes, sheet_usuarios, sheet_notifications):
-    """Precarga silenciosa de datos para acelerar la app"""
     _ = safe_get_sheet_data(sheet_reclamos, COLUMNAS_RECLAMOS)
     _ = safe_get_sheet_data(sheet_clientes, COLUMNAS_CLIENTES)
     _ = safe_get_sheet_data(sheet_usuarios, COLUMNAS_USUARIOS)
     _ = safe_get_sheet_data(sheet_notifications, COLUMNAS_NOTIFICACIONES)
 
-# Carga con spinner optimizado
 loading_placeholder = st.empty()
 loading_placeholder.markdown(get_loading_spinner(), unsafe_allow_html=True)
 try:
@@ -260,73 +302,41 @@ try:
 finally:
     loading_placeholder.empty()
 
-# --------------------------
-# AUTENTICACIÓN
-# --------------------------
-
 if not check_authentication():
     render_login(sheet_usuarios)
     st.stop()
 
-# ✅ Precarga silenciosa de las hojas para acelerar primer render
 precache_all_data(sheet_reclamos, sheet_clientes, sheet_usuarios, sheet_notifications)
 
-user_info = st.session_state.auth.get('user_info', {})
-user_role = user_info.get('rol', '')
-
-if 'notification_manager' not in st.session_state:
-    init_notification_manager(sheet_notifications)
-
-st.session_state.pop("usuarios_error_mostrado", None)
+df_reclamos, df_clientes, df_usuarios = safe_get_sheet_data(sheet_reclamos, COLUMNAS_RECLAMOS), safe_get_sheet_data(sheet_clientes, COLUMNAS_CLIENTES), safe_get_sheet_data(sheet_usuarios, COLUMNAS_USUARIOS)
+st.session_state.df_reclamos = df_reclamos
+st.session_state.df_clientes = df_clientes
+st.session_state.df_usuarios = df_usuarios
 
 # --------------------------
 # CONFIGURACIÓN DE PÁGINA
 # --------------------------
-
 if is_mobile():
-    st.set_page_config(
-        page_title="Fusion Reclamos",
-        page_icon="📋",
-        layout="centered",
-        initial_sidebar_state="collapsed"
-    )
+    st.set_page_config(page_title="Fusion Reclamos", page_icon="📋", layout="centered", initial_sidebar_state="collapsed")
 else:
-    st.set_page_config(
-        page_title="Fusion Reclamos App",
-        page_icon="📋",
-        layout="wide",
-        initial_sidebar_state="collapsed",
-        menu_items={
-            'About': "Sistema de gestión de reclamos v2.3"
-        }
-    )
+    st.set_page_config(page_title="Fusion Reclamos App", page_icon="📋", layout="wide", initial_sidebar_state="collapsed",
+                       menu_items={'About': "Sistema de gestión de reclamos v2.3"})
 
-# Inyectar estilos CSS optimizados
-if "modo_oscuro" not in st.session_state:
-    st.session_state.modo_oscuro = is_system_dark_mode()
+# 🔹 Inicializar modo oscuro con preferencia persistida
+init_modo_oscuro()
 
 st.markdown(get_main_styles(dark_mode=st.session_state.modo_oscuro), unsafe_allow_html=True)
 
 # --------------------------
-# SIDEBAR OPTIMIZADO
+# SIDEBAR
 # --------------------------
-
 with st.sidebar:
     st.markdown("### Panel de Control")
-    
-    nuevo_modo = st.toggle(
-        "🌙 Modo oscuro",
-        value=st.session_state.modo_oscuro,
-        key="dark_mode_toggle",
-        help="Cambiar entre tema claro y oscuro"
-    )
-    if nuevo_modo != st.session_state.modo_oscuro:
-        st.session_state.modo_oscuro = nuevo_modo
-        st.rerun()
-
+    st.checkbox("🌙 Modo oscuro", value=st.session_state.modo_oscuro,
+                key=MODO_OSCURO_KEY, on_change=_on_toggle_modo_oscuro,
+                help="Cambiar entre tema claro y oscuro")
     if st.session_state.auth.get("logged_in", False):
         render_notification_bell()
-
     st.markdown("---")
     render_user_widget()
         
