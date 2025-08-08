@@ -16,6 +16,45 @@ from config.settings import (
     DEBUG_MODE
 )
 
+def mostrar_overlay_cargando(mensaje="Procesando..."):
+    st.markdown(f"""
+        <div id="overlay-cargando" style="
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.6);
+            backdrop-filter: blur(4px);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+        ">
+            <div style="text-align: center;">
+                <div class="loader"></div>
+                <p>{mensaje}</p>
+            </div>
+        </div>
+        <style>
+        .loader {{
+            border: 6px solid #f3f3f3;
+            border-top: 6px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: auto;
+        }}
+        @keyframes spin {{
+            0% {{ transform: rotate(0deg); }}
+            100% {{ transform: rotate(360deg); }}
+        }}
+        </style>
+    """, unsafe_allow_html=True)
+
 def render_cierre_reclamos(df_reclamos, df_clientes, sheet_reclamos, sheet_clientes, user):
     """
     Muestra la interfaz para el cierre de reclamos
@@ -252,77 +291,83 @@ def _mostrar_reclamos_en_curso(df_reclamos, df_clientes, sheet_reclamos, sheet_c
     
     return cambios
 
+
 def _cerrar_reclamo(row, nuevo_precinto, precinto_actual, cliente_info, sheet_reclamos, sheet_clientes):
     """Maneja el cierre de un reclamo, devuelve True si hubo cambios"""
-    with st.spinner("Cerrando reclamo..."):
-        try:
-            fila_index = row.name + 2
-            updates = [{"range": f"I{fila_index}", "values": [["Resuelto"]]}]
+    try:
+        mostrar_overlay_cargando("Cerrando reclamo...")
+        time.sleep(3)  # para que el usuario perciba el efecto
+
+        fila_index = row.name + 2
+        updates = [{"range": f"I{fila_index}", "values": [["Resuelto"]]}]
+        
+        if len(COLUMNAS_RECLAMOS) > 12:
+            fecha_resolucion = format_fecha(ahora_argentina())
+            updates.append({"range": f"M{fila_index}", "values": [[fecha_resolucion]]})
+        
+        if nuevo_precinto.strip() and nuevo_precinto != precinto_actual:
+            updates.append({"range": f"F{fila_index}", "values": [[nuevo_precinto.strip()]]})
+        
+        success, error = api_manager.safe_sheet_operation(
+            batch_update_sheet,
+            sheet_reclamos,
+            updates,
+            is_batch=True
+        )
+        
+        if success:
+            if nuevo_precinto.strip() and nuevo_precinto != precinto_actual and not cliente_info.empty:
+                index_cliente_en_clientes = cliente_info.index[0] + 2
+                success_precinto, error_precinto = api_manager.safe_sheet_operation(
+                    sheet_clientes.update,
+                    f"F{index_cliente_en_clientes}",
+                    [[nuevo_precinto.strip()]]
+                )
+                if not success_precinto:
+                    st.warning(f"⚠️ Precinto guardado en reclamo pero no en hoja de clientes: {error_precinto}")
             
-            if len(COLUMNAS_RECLAMOS) > 12:
-                fecha_resolucion = format_fecha(ahora_argentina())
-                updates.append({"range": f"M{fila_index}", "values": [[fecha_resolucion]]})
-            
-            if nuevo_precinto.strip() and nuevo_precinto != precinto_actual:
-                updates.append({"range": f"F{fila_index}", "values": [[nuevo_precinto.strip()]]})
-            
-            success, error = api_manager.safe_sheet_operation(
-                batch_update_sheet,
-                sheet_reclamos,
-                updates,
-                is_batch=True
-            )
-            
-            if success:
-                if nuevo_precinto.strip() and nuevo_precinto != precinto_actual and not cliente_info.empty:
-                    index_cliente_en_clientes = cliente_info.index[0] + 2
-                    success_precinto, error_precinto = api_manager.safe_sheet_operation(
-                        sheet_clientes.update,
-                        f"F{index_cliente_en_clientes}",
-                        [[nuevo_precinto.strip()]]
-                    )
-                    if not success_precinto:
-                        st.warning(f"⚠️ Precinto guardado en reclamo pero no en hoja de clientes: {error_precinto}")
-                
-                st.success(f"🟢 Reclamo de {row['Nombre']} cerrado correctamente.")
-                return True
-            else:
-                st.error(f"❌ Error al actualizar: {error}")
-                if DEBUG_MODE:
-                    st.write("Detalles del error:", error)
-        except Exception as e:
-            st.error(f"❌ Error inesperado: {str(e)}")
+            st.success(f"🟢 Reclamo de {row['Nombre']} cerrado correctamente.")
+            return True
+        else:
+            st.error(f"❌ Error al actualizar: {error}")
             if DEBUG_MODE:
-                st.exception(e)
+                st.write("Detalles del error:", error)
+    except Exception as e:
+        st.error(f"❌ Error inesperado: {str(e)}")
+        if DEBUG_MODE:
+            st.exception(e)
     
     return False
 
+
 def _volver_a_pendiente(row, sheet_reclamos):
     """Devuelve un reclamo a estado pendiente, devuelve True si hubo cambios"""
-    with st.spinner("Cambiando estado..."):
-        try:
-            fila_index = row.name + 2
-            updates = [
-                {"range": f"I{fila_index}", "values": [["Pendiente"]]},
-                {"range": f"J{fila_index}", "values": [[""]]}
-            ]
-            success, error = api_manager.safe_sheet_operation(
-                batch_update_sheet,
-                sheet_reclamos,
-                updates,
-                is_batch=True
-            )
-            if success:
-                st.success(f"🔄 Reclamo de {row['Nombre']} vuelto a PENDIENTE.")
-                return True
-            else:
-                st.error(f"❌ Error al actualizar: {error}")
-                if DEBUG_MODE:
-                    st.write("Detalles del error:", error)
-        except Exception as e:
-            st.error(f"❌ Error inesperado: {str(e)}")
+    try:
+        mostrar_overlay_cargando("Cambiando estado...")
+        time.sleep(3)  # para que el usuario perciba el efecto
+
+        fila_index = row.name + 2
+        updates = [
+            {"range": f"I{fila_index}", "values": [["Pendiente"]]},
+            {"range": f"J{fila_index}", "values": [[""]]}
+        ]
+        success, error = api_manager.safe_sheet_operation(
+            batch_update_sheet,
+            sheet_reclamos,
+            updates,
+            is_batch=True
+        )
+        if success:
+            st.success(f"🔄 Reclamo de {row['Nombre']} vuelto a PENDIENTE.")
+            return True
+        else:
+            st.error(f"❌ Error al actualizar: {error}")
             if DEBUG_MODE:
-                st.exception(e)
+                st.write("Detalles del error:", error)
+    except Exception as e:
+        st.error(f"❌ Error inesperado: {str(e)}")
+        if DEBUG_MODE:
+            st.exception(e)
     
     return False
 
