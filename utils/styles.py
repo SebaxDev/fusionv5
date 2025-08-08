@@ -5,7 +5,7 @@ Aplicado como modo oscuro por defecto
 
 def get_main_styles(dark_mode=False):
     """Devuelve estilos CSS refinados con paleta Monokai"""
-    # Ignoramos el parámetro dark_mode y forzamos Monokai como base
+    # Ignoramos dark_mode y forzamos Monokai como base
     theme_vars = """
         --primary-color: #66D9EF;     /* Azul verdoso */
         --secondary-color: #F92672;   /* Magenta */
@@ -15,8 +15,10 @@ def get_main_styles(dark_mode=False):
         --card-bg: #3E3D32;           /* Fondo de tarjetas */
         --border-color: #49483E;      /* Bordes */
         --shadow: 0 2px 8px rgba(0,0,0,0.4);
-        --green-color: #A6E22E;
-        --orange-color: #FD971F;
+        --green-color: #A6E22E;       /* Verde éxito */
+        --orange-color: #FD971F;      /* Naranja advertencia */
+        --red-color: #FF5555;         /* Rojo error crítico */
+        --info-color: #E6DB74;        /* Amarillo info especial */
     """
     
     return f"""
@@ -151,17 +153,32 @@ def get_main_styles(dark_mode=False):
         transition: all 0.2s ease;
     }}
 
-    /* Colores especiales para avisos */
+    /* Avisos generales */
     .stAlert div[data-baseweb="notification"] {{
-        background-color: var(--card-bg);
-        border-left: 5px solid var(--secondary-color);
+        background-color: #403F35;
+        border-left: 5px solid var(--accent-color);
         color: var(--text-color);
+        font-weight: 500;
     }}
+
+    /* Éxito */
+    .stAlert[data-baseweb="notification"][role="status"] {{
+        border-left-color: var(--green-color);
+    }}
+
+    /* Advertencia */
     .stAlert[data-baseweb="notification"][role="alert"] {{
         border-left-color: var(--orange-color);
     }}
-    .stAlert[data-baseweb="notification"][role="status"] {{
-        border-left-color: var(--green-color);
+
+    /* Error crítico */
+    .stAlert[data-baseweb="notification"].error {{
+        border-left-color: var(--red-color);
+    }}
+
+    /* Aviso informativo especial */
+    .stAlert[data-baseweb="notification"].info {{
+        border-left-color: var(--info-color);
     }}
 
     /* Responsive */
