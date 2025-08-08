@@ -305,6 +305,10 @@ finally:
 if not check_authentication():
     render_login(sheet_usuarios)
     st.stop()
+    
+# ✅ Datos del usuario actual
+user_info = st.session_state.auth.get('user_info', {})
+user_role = user_info.get('rol', '')
 
 precache_all_data(sheet_reclamos, sheet_clientes, sheet_usuarios, sheet_notifications)
 
