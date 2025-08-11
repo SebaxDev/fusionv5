@@ -47,40 +47,85 @@ def inicializar_estado_grupos():
 
 def agrupar_zonas(zonas, grupos):
     """
-    Distribuye zonas entre grupos teniendo en cuenta compatibilidad geográfica.
+    Distribuye zonas entre grupos teniendo en cuenta compatibilidad geográfica
+    y asegurando un reparto balanceado (cada grupo recibe su 'target' de zonas).
     """
+    zonas = list(zonas)  # copia para estabilidad
+    n_zonas = len(zonas)
+    n_grupos = len(grupos)
     asignacion = {g: [] for g in grupos}
-    zonas_asignadas = set()
 
-    for g in grupos:
-        # Buscar zona no asignada que tenga menos conflictos
-        for zona in zonas:
-            if zona in zonas_asignadas:
-                continue
+    if n_grupos == 0 or n_zonas == 0:
+        return asignacion
 
-            asignacion[g].append(zona)
-            zonas_asignadas.add(zona)
+    # target por grupo: repartir n_zonas entre n_grupos lo más parejo posible
+    base = n_zonas // n_grupos
+    extra = n_zonas % n_grupos
+    # primeros 'extra' grupos reciben (base + 1), el resto base
+    target_counts = [base + 1 if i < extra else base for i in range(n_grupos)]
 
-            # Buscar zonas compatibles y asignarlas también (si hay lugar)
-            compatibles = ZONAS_COMPATIBLES.get(zona, [])
-            for comp in compatibles:
-                if comp not in zonas_asignadas and len(asignacion[g]) < len(zonas) // len(grupos) + 1:
-                    asignacion[g].append(comp)
-                    zonas_asignadas.add(comp)
-            break  # Solo una zona base por grupo
+    remaining = list(zonas)
 
-    # Si queda alguna zona sin asignar, la distribuimos equitativamente
-    zonas_restantes = [z for z in zonas if z not in zonas_asignadas]
-    for i, zona in enumerate(zonas_restantes):
-        grupo = grupos[i % len(grupos)]
-        asignacion[grupo].append(zona)
+    def compat_count(zone, candidates):
+        """Número de zonas compatibles de 'zone' que están en 'candidates'."""
+        return sum(1 for c in ZONAS_COMPATIBLES.get(zone, []) if c in candidates)
+
+    # 1) Seed: damos a cada grupo una zona base (si su target > 0)
+    for idx, grupo in enumerate(grupos):
+        if target_counts[idx] == 0:
+            # este grupo no debe recibir zonas (más grupos que zonas)
+            continue
+        # elegimos la zona con mayor cantidad de compatibles aún disponibles
+        best_zone = None
+        best_score = -1
+        for z in remaining:
+            score = compat_count(z, remaining)
+            if score > best_score:
+                best_score = score
+                best_zone = z
+        if best_zone is None:
+            break
+        asignacion[grupo].append(best_zone)
+        remaining.remove(best_zone)
+
+    # 2) Fill: completar cada grupo hasta su target, priorizando compatibilidad con lo ya asignado
+    for idx, grupo in enumerate(grupos):
+        while len(asignacion[grupo]) < target_counts[idx] and remaining:
+            best_zone = None
+            best_score = -1
+            for z in remaining:
+                # score = compatibilidad con zonas del grupo + potencial de clustering
+                score = 0
+                for gz in asignacion[grupo]:
+                    if gz in ZONAS_COMPATIBLES.get(z, []) or z in ZONAS_COMPATIBLES.get(gz, []):
+                        score += 2  # peso mayor si es directamente compatible con lo asignado
+                # sumar cuantos compatibles tiene de los restantes (potencial)
+                score += compat_count(z, remaining)
+                # desempate por orden natural (lower index) implícito
+                if score > best_score:
+                    best_score = score
+                    best_zone = z
+            # si no encontramos compatibilidad, asignamos el primero disponible
+            if best_zone is None:
+                best_zone = remaining.pop(0)
+            else:
+                remaining.remove(best_zone)
+            asignacion[grupo].append(best_zone)
+
+    # 3) Si por alguna razón quedan zonas (no debería), distribuir round-robin
+    if remaining:
+        # preferimos asignarlas a grupos que sí tienen objetivo > 0, si existen
+        groups_with_capacity = [g for i, g in enumerate(grupos) if target_counts[i] > 0] or grupos
+        for i, z in enumerate(remaining):
+            asignacion[groups_with_capacity[i % len(groups_with_capacity)]].append(z)
 
     return asignacion
+
 
 def distribuir_por_sector(df_reclamos, grupos_activos):
     """
     Distribuye reclamos basándose en zonas cercanas definidas por SECTORES_VECINOS.
-    Asocia zonas a grupos equilibradamente.
+    Asocia zonas a grupos usando agrupar_zonas() de forma robusta.
     """
     df_reclamos = df_reclamos[df_reclamos["Estado"] == "Pendiente"].copy()
     grupos = GRUPOS_POSIBLES[:grupos_activos]
@@ -88,17 +133,18 @@ def distribuir_por_sector(df_reclamos, grupos_activos):
 
     zonas = list(SECTORES_VECINOS.keys())
 
-    # Distribuir zonas entre grupos
+    # Distribuir zonas entre grupos con la función mejorada
     zonas_por_grupo = agrupar_zonas(zonas, grupos)
 
     # Crear mapa: sector → grupo
     sector_grupo_map = {}
     for grupo, zonas_asignadas in zonas_por_grupo.items():
         for zona in zonas_asignadas:
-            for sector in SECTORES_VECINOS[zona]:
-                sector_grupo_map[sector] = grupo
+            sectores = SECTORES_VECINOS.get(zona, [])
+            for sector in sectores:
+                sector_grupo_map[str(sector)] = grupo
 
-    # Asignar reclamos según el grupo de su sector
+    # Asignar reclamos según el grupo de su sector (si existe mapeo)
     for _, r in df_reclamos.iterrows():
         sector = str(r.get("Sector", "")).strip()
         grupo = sector_grupo_map.get(sector)
