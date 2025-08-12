@@ -353,20 +353,25 @@ def _actualizar_reclamo(df, sheet_reclamos, reclamo_id, updates, full_update=Fal
             estado_anterior = df[df["ID Reclamo"] == reclamo_id]["Estado"].values[0]
 
             if full_update:
+                # ✅ Mapeo corregido de columnas según tu hoja
                 updates_list.extend([
-                    {"range": f"D{fila}", "values": [[updates['direccion']]]},
-                    {"range": f"E{fila}", "values": [[updates['telefono']]]},
-                    {"range": f"G{fila}", "values": [[updates['tipo_reclamo']]]},
-                    {"range": f"H{fila}", "values": [[updates['detalles']]]},
-                    {"range": f"K{fila}", "values": [[updates['precinto']]]},
-                    {"range": f"C{fila}", "values": [[str(updates['sector'])]]},
+                    {"range": f"E{fila}", "values": [[updates['direccion'].upper()]]},  # Dirección
+                    {"range": f"F{fila}", "values": [[str(updates['telefono'])]]},     # Teléfono
+                    {"range": f"G{fila}", "values": [[updates['tipo_reclamo']]]},      # Tipo reclamo
+                    {"range": f"H{fila}", "values": [[updates['detalles']]]},          # Detalles
+                    {"range": f"K{fila}", "values": [[updates['precinto']]]},          # Precinto
+                    {"range": f"C{fila}", "values": [[str(updates['sector'])]]},       # Sector
+                    {"range": f"D{fila}", "values": [[updates.get('nombre', '').upper()]]}, # Nombre
                 ])
 
+            # ✅ Estado (columna I)
             updates_list.append({"range": f"I{fila}", "values": [[updates['estado']]]})
 
+            # Si pasa a pendiente, limpiar columna J (técnico)
             if updates['estado'] == "Pendiente":
                 updates_list.append({"range": f"J{fila}", "values": [[""]]})
 
+            # Guardar en Google Sheets
             success, error = api_manager.safe_sheet_operation(
                 batch_update_sheet, 
                 sheet_reclamos, 
@@ -392,6 +397,7 @@ def _actualizar_reclamo(df, sheet_reclamos, reclamo_id, updates, full_update=Fal
             else:
                 st.error(f"❌ Error al actualizar: {error}")
                 return False
+
         except Exception as e:
             st.error(f"❌ Error inesperado: {str(e)}")
             if DEBUG_MODE:
