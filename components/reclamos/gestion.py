@@ -328,7 +328,8 @@ def _mostrar_edicion_reclamo(df, sheet_reclamos):
                 "detalles": detalles,
                 "precinto": precinto,
                 "sector": sector_edit,
-                "estado": estado_nuevo
+                "estado": estado_nuevo,
+                "nombre": reclamo_actual.get("Nombre", "")  # ✅ Se agrega aquí
             },
             full_update=True
         )
