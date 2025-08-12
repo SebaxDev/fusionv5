@@ -362,7 +362,6 @@ def _actualizar_reclamo(df, sheet_reclamos, reclamo_id, updates, full_update=Fal
                     {"range": f"H{fila}", "values": [[updates['detalles']]]},          # Detalles
                     {"range": f"K{fila}", "values": [[updates['precinto']]]},          # Precinto
                     {"range": f"C{fila}", "values": [[str(updates['sector'])]]},       # Sector
-                    {"range": f"D{fila}", "values": [[updates.get('nombre', '').upper()]]}, # Nombre
                 ])
 
             # ✅ Estado (columna I)
