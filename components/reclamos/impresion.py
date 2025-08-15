@@ -90,6 +90,19 @@ def render_impresion_reclamos(df_reclamos, df_clientes, user):
     finally:
         st.markdown('</div>', unsafe_allow_html=True)
     
+    # === NUEVA SECCIÓN: Reporte Diario ===
+    st.markdown("### 📄 Generar Reporte Diario")
+
+    if st.button("Generar y descargar PDF del día"):
+        pdf_buffer = generar_reporte_diario(st.session_state.df_reclamos)
+        fecha_hoy = ahora_argentina().strftime("%Y-%m-%d")
+        st.download_button(
+            label="⬇️ Descargar Reporte Diario",
+            data=pdf_buffer,
+            file_name=f"reporte_diario_{fecha_hoy}.pdf",
+            mime="application/pdf"
+        )
+
     return result
 
 def _preparar_datos(df_reclamos, df_clientes, user):
@@ -477,15 +490,3 @@ def _generar_pdf_en_curso_por_tecnico(df_merged, usuario=None):
         return "PDF generado con reclamos en curso por técnico"
 
     return None
-
-st.markdown("### 📄 Generar Reporte Diario")
-
-if st.button("Generar y descargar PDF del día"):
-    pdf_buffer = generar_reporte_diario(st.session_state.df_reclamos)
-    fecha_hoy = ahora_argentina().strftime("%Y-%m-%d")
-    st.download_button(
-        label="⬇️ Descargar Reporte Diario",
-        data=pdf_buffer,
-        file_name=f"reporte_diario_{fecha_hoy}.pdf",
-        mime="application/pdf"
-    )
