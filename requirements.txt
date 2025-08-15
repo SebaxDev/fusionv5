@@ -7,3 +7,4 @@ pandas
 reportlab
 pytz
 streamlit-lottie
+Pillow

@@ -8,7 +8,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from utils.date_utils import format_fecha, parse_fecha
 from utils.pdf_utils import agregar_pie_pdf
-from utils.reporte_diario import generar_reporte_diario
+from utils.reporte_diario import render_reporte_diario
 from utils.date_utils import ahora_argentina
 
 def render_impresion_reclamos(df_reclamos, df_clientes, user):
@@ -91,16 +91,16 @@ def render_impresion_reclamos(df_reclamos, df_clientes, user):
         st.markdown('</div>', unsafe_allow_html=True)
     
     # === NUEVA SECCIÓN: Reporte Diario ===
-    st.markdown("### 📄 Generar Reporte Diario")
+    st.markdown("### 📄 Generar Reporte Diario (PNG)")
 
-    if st.button("Generar y descargar PDF del día"):
-        pdf_buffer = generar_reporte_diario(st.session_state.df_reclamos)
+    if st.button("Generar y descargar imagen del día"):
+        img_buffer = generar_reporte_diario_imagen(st.session_state.df_reclamos)
         fecha_hoy = ahora_argentina().strftime("%Y-%m-%d")
         st.download_button(
             label="⬇️ Descargar Reporte Diario",
-            data=pdf_buffer,
-            file_name=f"reporte_diario_{fecha_hoy}.pdf",
-            mime="application/pdf"
+            data=img_buffer,
+            file_name=f"reporte_diario_{fecha_hoy}.png",
+            mime="image/png"
         )
 
     return result
