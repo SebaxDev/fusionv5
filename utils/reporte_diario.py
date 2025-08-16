@@ -35,6 +35,12 @@ def generar_reporte_diario_imagen(df_reclamos):
     fecha_hoy = ahora_argentina().strftime("%d/%m/%Y")
     hora_gen = ahora_argentina().strftime("%H:%M")
 
+    # Asegurar que la columna Fecha de Cierre sea datetime
+    if "Fecha de Cierre" in df_reclamos.columns:
+        df_reclamos["Fecha de Cierre"] = pd.to_datetime(
+            df_reclamos["Fecha de Cierre"], errors="coerce", dayfirst=True
+        )
+
     # Reclamos ingresados hoy
     hoy = ahora_argentina().date()
     reclamos_hoy = df_reclamos[df_reclamos['Fecha y hora'].dt.date == hoy]
