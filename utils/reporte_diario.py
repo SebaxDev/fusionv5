@@ -97,7 +97,7 @@ def generar_reporte_diario_imagen(df_reclamos):
 
     draw_line(f"■ Quedan pendientes: {total_pendientes}", font_subtitle, HIGHLIGHT_COLOR, line_height)
     for _, row in pendientes_tipo.iterrows():
-        draw_line(f"{row['Tipo de Reclamo']}: {row['Estado']}", font_text, TEXT_COLOR, line_height)
+        draw_line(f"{row['Tipo de reclamo']}: {row['Estado']}", font_text, TEXT_COLOR, line_height)
 
     # Guardar a buffer
     buffer = io.BytesIO()
