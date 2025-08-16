@@ -62,7 +62,7 @@ def generar_reporte_diario_imagen(df_reclamos):
     # Pendientes agrupados por tipo
     pendientes = df_reclamos[df_reclamos['Estado'] == 'Pendiente']
     pendientes_tipo = (
-        pendientes.groupby('Tipo de Reclamo')['Estado']
+        pendientes.groupby('Tipo de reclamo')['Estado']
         .count()
         .reset_index()
         .sort_values(by='Estado', ascending=False)
