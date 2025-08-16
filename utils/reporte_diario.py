@@ -40,11 +40,12 @@ def generar_reporte_diario_imagen(df_reclamos):
     reclamos_hoy = df_reclamos[df_reclamos['Fecha y hora'].dt.date == hoy]
     total_hoy = len(reclamos_hoy)
 
-    # Reclamos resueltos por técnico/grupo
+    # Reclamos resueltos por técnico/grupo basados en la fecha de cierre
     resueltos_hoy = df_reclamos[
-        (df_reclamos['Fecha y hora'].dt.date == hoy) &
+        (df_reclamos['Fecha de Cierre'].dt.date == hoy) &
         (df_reclamos['Estado'] == 'Resuelto')
     ]
+
     tecnicos_resueltos = (
         resueltos_hoy.groupby('Técnico')['Estado']
         .count()

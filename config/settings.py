@@ -38,8 +38,8 @@ COLUMNAS_NOTIFICACIONES = [
 # --------------------------
 COLUMNAS_RECLAMOS = [
     "Fecha y hora", "Nº Cliente", "Sector", "Nombre", 
-    "Dirección", "Teléfono", "Tipo de reclamo", 
-    "Detalles", "Estado", "Técnico", "N° de Precinto", "Atendido por", "ID Reclamo"
+    "Dirección", "Teléfono", "Tipo de reclamo", "Detalles", 
+    "Estado", "Técnico", "N° de Precinto", "Atendido por", "Fecha de Cierre", "ID Reclamo"
 ]
 
 COLUMNAS_CLIENTES = [
