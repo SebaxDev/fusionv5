@@ -20,8 +20,8 @@ def generar_reporte_diario_imagen(df_reclamos):
     # Cargar fuente (usa una genérica de sistema si no hay personalizada)
     try:
         font_title = ImageFont.truetype("DejaVuSans-Bold.ttf", 40)
-        font_subtitle = ImageFont.truetype("DejaVuSans-Bold.ttf", 30)
-        font_text = ImageFont.truetype("DejaVuSans.ttf", 25)
+        font_subtitle = ImageFont.truetype("DejaVuSans-Bold.ttf", 28)
+        font_text = ImageFont.truetype("DejaVuSans.ttf", 24)
     except:
         font_title = ImageFont.load_default()
         font_subtitle = ImageFont.load_default()
