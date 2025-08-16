@@ -19,9 +19,9 @@ def generar_reporte_diario_imagen(df_reclamos):
 
     # Cargar fuente (usa una genérica de sistema si no hay personalizada)
     try:
-        font_title = ImageFont.truetype("DejaVuSans-Bold.ttf", 28)
-        font_subtitle = ImageFont.truetype("DejaVuSans-Bold.ttf", 22)
-        font_text = ImageFont.truetype("DejaVuSans.ttf", 18)
+        font_title = ImageFont.truetype("DejaVuSans-Bold.ttf", 50)
+        font_subtitle = ImageFont.truetype("DejaVuSans-Bold.ttf", 45)
+        font_text = ImageFont.truetype("DejaVuSans.ttf", 40)
     except:
         font_title = ImageFont.load_default()
         font_subtitle = ImageFont.load_default()
@@ -29,7 +29,7 @@ def generar_reporte_diario_imagen(df_reclamos):
 
     # Variables para escribir texto
     y = 50
-    line_height = 28
+    line_height = 32
 
     # Fecha
     fecha_hoy = ahora_argentina().strftime("%d/%m/%Y")
