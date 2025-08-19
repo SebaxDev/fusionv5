@@ -149,27 +149,34 @@ def distribuir_por_sector_mejorado(df_reclamos, grupos_activos):
     
     return asignaciones
 
-def _balancear_asignaciones(asignaciones, df_reclamos, max_diferencia=3):
+def _balancear_asignaciones(asignaciones, df_reclamos):
     """
-    Ajusta las asignaciones para equilibrar la carga de trabajo entre grupos.
+    Rebalancea hasta lograr equidad fuerte:
+    - Todos los grupos tendrán carga floor(N/G) o ceil(N/G).
+    - Condición de corte: max(cargas) - min(cargas) <= 1
     """
-    # Calcular carga actual
-    carga_por_grupo = {g: len(reclamos) for g, reclamos in asignaciones.items()}
-    carga_promedio = sum(carga_por_grupo.values()) / len(carga_por_grupo) if carga_por_grupo else 0
+    # Cargas iniciales
+    carga_por_grupo = {g: len(recs) for g, recs in asignaciones.items()}
 
-    # Verificar desequilibrios iniciales
-    diferencias = {g: abs(carga - carga_promedio) for g, carga in carga_por_grupo.items()}
-    if max(diferencias.values()) <= max_diferencia:
-        return asignaciones  # Ya está balanceado
+    def balanced(cargas):
+        return (max(cargas.values()) - min(cargas.values())) <= 1
 
-    # Rebalancear hasta que las diferencias sean aceptables
-    while max(diferencias.values()) > max_diferencia:
-        # Ordenar grupos de menor a mayor carga
+    # Repetir hasta que la distribución cumpla la condición
+    intentos = 0
+    max_intentos = 1000  # guarda por si hubiera un caso degenerado
+
+    while not balanced(carga_por_grupo) and intentos < max_intentos:
+        intentos += 1
+        # Ordenar grupos por carga (menor → mayor)
         grupos_ordenados = sorted(carga_por_grupo.keys(), key=lambda g: carga_por_grupo[g])
         grupo_menos_cargado = grupos_ordenados[0]
         grupo_mas_cargado = grupos_ordenados[-1]
 
-        # Encontrar reclamo transferible
+        # Si ya estamos a 1 de diferencia, cortar
+        if carga_por_grupo[grupo_mas_cargado] - carga_por_grupo[grupo_menos_cargado] <= 1:
+            break
+
+        # Elegir un reclamo candidato del grupo más cargado que sea compatible con el menos cargado
         reclamo_a_transferir = _encontrar_reclamo_transferible(
             asignaciones[grupo_mas_cargado],
             grupo_mas_cargado,
@@ -178,50 +185,77 @@ def _balancear_asignaciones(asignaciones, df_reclamos, max_diferencia=3):
             asignaciones
         )
 
-        if reclamo_a_transferir:
-            # Transferir reclamo
-            asignaciones[grupo_mas_cargado].remove(reclamo_a_transferir)
-            asignaciones[grupo_menos_cargado].append(reclamo_a_transferir)
+        if not reclamo_a_transferir:
+            # No encontramos uno compatible; salimos para evitar bucle infinito
+            break
 
-            # Actualizar cargas
-            carga_por_grupo[grupo_mas_cargado] -= 1
-            carga_por_grupo[grupo_menos_cargado] += 1
-            diferencias = {g: abs(carga - carga_promedio) for g, carga in carga_por_grupo.items()}
-        else:
-            break  # No se pueden transferir más reclamos
+        # Transferir
+        asignaciones[grupo_mas_cargado].remove(reclamo_a_transferir)
+        asignaciones[grupo_menos_cargado].append(reclamo_a_transferir)
+
+        # Actualizar cargas
+        carga_por_grupo[grupo_mas_cargado] -= 1
+        carga_por_grupo[grupo_menos_cargado] += 1
 
     return asignaciones
 
 def _encontrar_reclamo_transferible(reclamos_grupo_origen, grupo_origen, grupo_destino, df_reclamos, asignaciones):
     """
-    Encuentra el reclamo más adecuado para transferir entre grupos.
-    La idea es mover uno que esté geográficamente cercano a las zonas
-    ya asignadas al grupo destino.
+    Elige el mejor reclamo para mover del grupo origen al destino:
+    - Compatible con zonas del destino (prioridad alta)
+    - Zonas más "centrales" (mayor conectividad) tienen más prioridad
+    - Si el destino aún no tiene zonas, prioriza centralidad
     """
-    # Zonas cubiertas actualmente por el grupo destino
+    # 1) Armar zonas actuales del destino
     zonas_destino = []
     reclamos_destino = df_reclamos[df_reclamos["ID Reclamo"].isin(asignaciones[grupo_destino])]
     for _, r in reclamos_destino.iterrows():
-        sector = str(r["Sector"])
-        for zona, sectores in SECTORES_VECINOS.items():
-            if sector in sectores and zona not in zonas_destino:
-                zonas_destino.append(zona)
+        sec = str(r["Sector"])
+        for z, sectores in SECTORES_VECINOS.items():
+            if sec in sectores and z not in zonas_destino:
+                zonas_destino.append(z)
 
-    # Buscar en los reclamos del grupo origen uno que encaje mejor con las zonas destino
+    # 2) Evaluar candidatos del origen
+    mejor_id = None
+    mejor_score = float("-inf")
+
     for reclamo_id in reclamos_grupo_origen:
-        reclamo = df_reclamos[df_reclamos["ID Reclamo"] == reclamo_id]
-        if reclamo.empty:
+        fila = df_reclamos[df_reclamos["ID Reclamo"] == reclamo_id]
+        if fila.empty:
             continue
 
-        sector = str(reclamo.iloc[0]["Sector"])
-
-        for zona, sectores in SECTORES_VECINOS.items():
+        sector = str(fila.iloc[0]["Sector"])
+        zona_reclamo = None
+        for z, sectores in SECTORES_VECINOS.items():
             if sector in sectores:
-                if any(zona in ZONAS_COMPATIBLES.get(z_dest, []) for z_dest in zonas_destino):
-                    return reclamo_id  # encontrado un reclamo transferible compatible
+                zona_reclamo = z
+                break
 
-    # Si no encuentra uno ideal, devolver el primero como fallback
-    return reclamos_grupo_origen[0] if reclamos_grupo_origen else None
+        if not zona_reclamo:
+            continue
+
+        # Puntaje base por centralidad (cuántas zonas son compatibles con esta zona)
+        centralidad = len(ZONAS_COMPATIBLES.get(zona_reclamo, []))
+        score = centralidad  # base
+
+        if zonas_destino:
+            # Compatible con al menos una zona del destino
+            compatible = any(zona_reclamo in ZONAS_COMPATIBLES.get(zd, []) for zd in zonas_destino)
+            if compatible:
+                score += 100
+            # Match exacto (misma zona) también suma
+            if zona_reclamo in zonas_destino:
+                score += 20
+        else:
+            # Sin zonas destino aún → priorizar centralidad pura
+            score += 10  # pequeño empuje para desbloquear
+
+        if score > mejor_score:
+            mejor_score = score
+            mejor_id = reclamo_id
+
+    # 3) Fallback si no encontramos nada
+    return mejor_id if mejor_id is not None else (reclamos_grupo_origen[0] if reclamos_grupo_origen else None)
 
 def distribuir_por_tipo(df_reclamos, grupos_activos):
     df_reclamos = df_reclamos[df_reclamos["Estado"] == "Pendiente"].copy()  # <--- agregado
