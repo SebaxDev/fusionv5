@@ -92,6 +92,10 @@ def render_nuevo_reclamo(df_reclamos, df_clientes, sheet_reclamos, sheet_cliente
         if not match.empty:
             estado['cliente_existente'] = match.iloc[0].to_dict()
             st.success("✅ Cliente reconocido, datos auto-cargados.")
+
+        else:
+            estado['cliente_nuevo'] = True
+            st.info("ℹ️ Este cliente no existe en la base y se cargará como cliente nuevo.")
         
         # Verificar reclamos activos
         reclamos_activos = _verificar_reclamos_activos(estado['nro_cliente'], df_reclamos_norm)
