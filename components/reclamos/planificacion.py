@@ -45,21 +45,13 @@ def inicializar_estado_grupos():
     if "simulacion_asignaciones" not in st.session_state:
         st.session_state.simulacion_asignaciones = {}
 
-def agrupar_zonas_mejorado(zonas, grupos, df_reclamos):
+def agrupar_zonas_completas(zonas, grupos, df_reclamos, permitir_redistribucion=True):
     """
-    Distribuye zonas entre grupos considerando:
-    1. Compatibilidad geográfica (zonas cercanas)
-    2. Carga equilibrada de reclamos por grupo
-    3. Minimización de distancia entre zonas asignadas
+    Distribuye ZONAS COMPLETAS entre grupos, con redistribución opcional para muchos grupos
     """
-    zonas = list(zonas)
-    n_zonas = len(zonas)
-    n_grupos = len(grupos)
-    asignacion = {g: [] for g in grupos}
+    if not grupos or not zonas:
+        return {g: [] for g in grupos}
     
-    if n_grupos == 0 or n_zonas == 0:
-        return asignacion
-
     # Calcular reclamos por zona
     reclamos_por_zona = {}
     for zona in zonas:
@@ -69,56 +61,80 @@ def agrupar_zonas_mejorado(zonas, grupos, df_reclamos):
             (df_reclamos["Estado"] == "Pendiente")
         ])
         reclamos_por_zona[zona] = total_reclamos
-
+    
     # Ordenar zonas por cantidad de reclamos (descendente)
     zonas_ordenadas = sorted(zonas, key=lambda z: reclamos_por_zona[z], reverse=True)
     
-    # Calcular target de reclamos por grupo
-    total_reclamos = sum(reclamos_por_zona.values())
-    target_por_grupo = total_reclamos // n_grupos
+    # Inicializar
+    asignacion = {g: [] for g in grupos}
+    carga_actual = {g: 0 for g in grupos}
     
-    # Asignación inteligente
+    # Asignar zonas grandes primero
     for zona in zonas_ordenadas:
-        mejor_grupo = None
-        mejor_puntaje = float('-inf')
+        # Encontrar el grupo con menor carga ACTUAL
+        grupo_elegido = min(grupos, key=lambda g: carga_actual[g])
         
-        for grupo in grupos:
-            puntaje = 0
-            
-            # 1. Balance de carga
-            reclamos_actuales = sum(reclamos_por_zona[z] for z in asignacion[grupo])
-            diferencia_carga = abs((reclamos_actuales + reclamos_por_zona[zona]) - target_por_grupo)
-            puntaje_balance = 100 - (diferencia_carga * 10)
-            
-            # 2. Proximidad geográfica
-            puntaje_proximidad = 0
-            if asignacion[grupo]:
-                for zona_asignada in asignacion[grupo]:
-                    if zona in ZONAS_COMPATIBLES.get(zona_asignada, []):
-                        puntaje_proximidad += 30
-                    elif zona_asignada == zona:
-                        puntaje_proximidad += 50
-            
-            # 3. Cantidad de zonas (evitar muchos saltos)
-            if len(asignacion[grupo]) > 0:
-                puntaje_cantidad = 20 / len(asignacion[grupo])
-            else:
-                puntaje_cantidad = 50
-            
-            puntaje_total = puntaje_balance + puntaje_proximidad + puntaje_cantidad
-            
-            if puntaje_total > mejor_puntaje:
-                mejor_puntaje = puntaje_total
-                mejor_grupo = grupo
+        # Asignar la ZONA COMPLETA a este grupo
+        asignacion[grupo_elegido].append(zona)
+        carga_actual[grupo_elegido] += reclamos_por_zona[zona]
+    
+    # VERIFICAR SI NECESITA REDISTRIBUCIÓN (solo para 4+ grupos con desbalance)
+    if (permitir_redistribucion and 
+        len(grupos) >= 4 and 
+        _necesita_redistribucion(carga_actual)):
         
-        if mejor_grupo:
-            asignacion[mejor_grupo].append(zona)
+        asignacion = _redistribuir_inteligente(asignacion, carga_actual, reclamos_por_zona, grupos)
     
     return asignacion
 
+def _necesita_redistribucion(carga_actual):
+    """Determina si la distribución necesita ajuste"""
+    cargas = list(carga_actual.values())
+    return max(cargas) - min(cargas) > 2  # Diferencia mayor a 2 reclamos
+
+def _redistribuir_inteligente(asignacion, carga_actual, reclamos_por_zona, grupos):
+    """
+    Redistribución inteligente para muchos grupos:
+    - Solo mueve zonas pequeñas entre grupos vecinos geográficamente
+    - Mantiene la integridad de las zonas (no las divide)
+    """
+    # Encontrar el grupo más cargado y el menos cargado
+    grupo_max = max(carga_actual.items(), key=lambda x: x[1])[0]
+    grupo_min = min(carga_actual.items(), key=lambda x: x[1])[0]
+    
+    # Buscar una zona pequeña del grupo max que sea compatible con grupo_min
+    for zona in asignacion[grupo_max]:
+        if reclamos_por_zona[zona] <= 2:  # Solo zonas muy pequeñas
+            # Verificar compatibilidad geográfica
+            if _son_zonas_compatibles(zona, asignacion[grupo_min]):
+                # Mover la zona
+                asignacion[grupo_max].remove(zona)
+                asignacion[grupo_min].append(zona)
+                carga_actual[grupo_max] -= reclamos_por_zona[zona]
+                carga_actual[grupo_min] += reclamos_por_zona[zona]
+                
+                # Verificar si ya está balanceado
+                if not _necesita_redistribucion(carga_actual):
+                    break
+    
+    return asignacion
+
+def _son_zonas_compatibles(zona, zonas_destino):
+    """
+    Verifica si una zona es compatible geográficamente con un conjunto de zonas
+    """
+    if not zonas_destino:
+        return True  # Siempre compatible con grupo vacío
+    
+    for zona_dest in zonas_destino:
+        if (zona in ZONAS_COMPATIBLES.get(zona_dest, []) or 
+            zona_dest in ZONAS_COMPATIBLES.get(zona, [])):
+            return True
+    return False
+
 def distribuir_por_sector_mejorado(df_reclamos, grupos_activos):
     """
-    Distribución mejorada que considera carga equilibrada y proximidad
+    Distribución que respeta zonas completas
     """
     df_reclamos = df_reclamos[df_reclamos["Estado"] == "Pendiente"].copy()
     grupos = GRUPOS_POSIBLES[:grupos_activos]
@@ -126,10 +142,10 @@ def distribuir_por_sector_mejorado(df_reclamos, grupos_activos):
 
     zonas = list(SECTORES_VECINOS.keys())
     
-    # Usar el algoritmo mejorado
-    zonas_por_grupo = agrupar_zonas_mejorado(zonas, grupos, df_reclamos)
+    # Usar algoritmo que no divide zonas
+    zonas_por_grupo = agrupar_zonas_completas(zonas, grupos, df_reclamos)
     
-    # Crear mapa: sector → grupo
+    # Crear mapa: sector → grupo (ahora todos los sectores de una zona van al mismo grupo)
     sector_grupo_map = {}
     for grupo, zonas_asignadas in zonas_por_grupo.items():
         for zona in zonas_asignadas:
@@ -143,9 +159,6 @@ def distribuir_por_sector_mejorado(df_reclamos, grupos_activos):
         grupo = sector_grupo_map.get(sector)
         if grupo:
             asignaciones[grupo].append(r["ID Reclamo"])
-    
-    # Balancear manualmente si hay desequilibrios grandes
-    asignaciones = _balancear_asignaciones(asignaciones, df_reclamos)
     
     return asignaciones
 
@@ -411,7 +424,7 @@ def render_planificacion_grupos(df_reclamos, sheet_reclamos, user):
                     st.session_state.simulacion_asignaciones = distribuir_por_sector_mejorado(df_reclamos, grupos_activos)
 
                     # Mostrar zonas asignadas por grupo con el algoritmo mejorado
-                    zonas_por_grupo = agrupar_zonas_mejorado(
+                    zonas_por_grupo = agrupar_zonas_completas(
                         list(SECTORES_VECINOS.keys()),
                         GRUPOS_POSIBLES[:grupos_activos],
                         df_reclamos
