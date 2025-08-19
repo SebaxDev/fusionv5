@@ -276,7 +276,7 @@ def _procesar_envio_formulario(estado, nombre, direccion, telefono, sector, tipo
                 st.cache_data.clear()
 
                 # 🔄 Forzar recarga para limpiar el formulario y mostrar reclamo activo
-                st.experimental_rerun()
+                st.rerun()
                 
             else:
                 st.error(f"❌ Error al guardar: {error}")
