@@ -488,7 +488,7 @@ st.markdown("---")
 st.markdown("""
 <div style="text-align: center; padding: 2rem 0; background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%); border-radius: var(--radius-xl); margin-bottom: 2rem; border: 1px solid var(--border-color);">
     <h1 style="margin: 0; background: linear-gradient(135deg, #66D9EF 0%, #F92672 50%, #A6E22E 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-        📋 Fusion Reclamos CRM
+        Fusion Reclamos CRM
     </h1>
     <p style="color: var(--text-secondary); font-size: 1.1rem; margin: 0.5rem 0 0 0;">
         Sistema profesional de gestión de reclamos técnicos
