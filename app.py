@@ -323,7 +323,7 @@ st.session_state.df_usuarios = df_usuarios
 if is_mobile():
     st.set_page_config(page_title="Fusion Reclamos", page_icon="📋", layout="centered", initial_sidebar_state="collapsed")
 else:
-    st.set_page_config(page_title="Fusion Reclamos App", page_icon="📋", layout="wide", initial_sidebar_state="collapsed",
+    st.set_page_config(page_title="Fusion Reclamos CRM", page_icon="📋", layout="wide", initial_sidebar_state="collapsed",
                        menu_items={'About': "Sistema de gestión de reclamos v2.3"})
 
 # 🔹 Inicializar modo oscuro con preferencia persistida
@@ -456,12 +456,10 @@ st.session_state.df_usuarios = df_usuarios
 
 st.markdown("---")
 st.markdown("""
-<div style="text-align: center;">
-    <h1 style="margin:0; margin-bottom:0.5rem;">
-        📋 Fusion Reclamos App
-    </h1>
-    <p style="margin:0;">
-        Sistema integral de gestión de reclamos técnicos
+<div style="text-align: center; padding: 2rem 0;">
+    <h1>📋 Fusion Reclamos CRM</h1>
+    <p style="color: var(--text-secondary); font-size: 1.1rem;">
+        Sistema profesional de gestión de reclamos técnicos
     </p>
 </div>
 """, unsafe_allow_html=True)
