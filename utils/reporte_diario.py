@@ -35,20 +35,30 @@ def generar_reporte_diario_imagen(df_reclamos):
     fecha_hoy = ahora_argentina().strftime("%d/%m/%Y")
     hora_gen = ahora_argentina().strftime("%H:%M")
 
-    # Asegurar que la columna Fecha de Cierre sea datetime
-    if "Fecha de Cierre" in df_reclamos.columns:
-        df_reclamos["Fecha de Cierre"] = pd.to_datetime(
-            df_reclamos["Fecha de Cierre"], errors="coerce", dayfirst=True
+    # Asegurar que la columna Fecha_formateada (columna M) sea datetime
+    if "Fecha_formateada" in df_reclamos.columns:
+        df_reclamos["Fecha_formateada"] = pd.to_datetime(
+            df_reclamos["Fecha_formateada"], 
+            errors="coerce", 
+            dayfirst=True
         )
+    else:
+        # Si no existe la columna, crear una vacía
+        df_reclamos["Fecha_formateada"] = pd.NaT
 
     # Reclamos ingresados hoy
     hoy = ahora_argentina().date()
     reclamos_hoy = df_reclamos[df_reclamos['Fecha y hora'].dt.date == hoy]
     total_hoy = len(reclamos_hoy)
 
-    # Reclamos resueltos por técnico/grupo basados en la fecha de cierre
+    # Reclamos resueltos por técnico/grupo basados en la fecha de cierre HOY
+    # Obtener el inicio y fin del día en Argentina timezone
+    inicio_dia = ahora_argentina().replace(hour=0, minute=0, second=0, microsecond=0)
+    fin_dia = inicio_dia.replace(hour=23, minute=59, second=59, microsecond=999999)
+    
     resueltos_hoy = df_reclamos[
-        (df_reclamos['Fecha de Cierre'].dt.date == hoy) &
+        (df_reclamos['Fecha_formateada'].notna()) &
+        (df_reclamos['Fecha_formateada'].dt.date == hoy) &
         (df_reclamos['Estado'] == 'Resuelto')
     ]
 
@@ -106,9 +116,60 @@ def generar_reporte_diario_imagen(df_reclamos):
     return buffer
 
 
+def debug_fechas_cierre(df_reclamos):
+    """Función para debuggear problemas con fechas de cierre"""
+    st.subheader("🔍 Debug - Fechas de Cierre (Fecha_formateada)")
+    
+    if "Fecha_formateada" not in df_reclamos.columns:
+        st.warning("No existe la columna 'Fecha_formateada'")
+        return
+    
+    # Convertir a datetime para el análisis
+    df_reclamos["Fecha_formateada_dt"] = pd.to_datetime(
+        df_reclamos["Fecha_formateada"], 
+        errors="coerce", 
+        dayfirst=True
+    )
+    
+    st.write("**Muestra de fechas de cierre:**")
+    st.dataframe(df_reclamos[['ID Reclamo', 'Estado', 'Técnico', 'Fecha_formateada', 'Fecha_formateada_dt']].head(10))
+    
+    st.write("**Estadísticas:**")
+    st.write(f"Total reclamos: {len(df_reclamos)}")
+    st.write(f"Reclamos con Fecha_formateada no nula: {df_reclamos['Fecha_formateada_dt'].notna().sum()}")
+    st.write(f"Reclamos Resueltos: {(df_reclamos['Estado'] == 'Resuelto').sum()}")
+    
+    # Reclamos resueltos hoy
+    hoy = ahora_argentina().date()
+    resueltos_hoy = df_reclamos[
+        (df_reclamos['Estado'] == 'Resuelto') &
+        (df_reclamos['Fecha_formateada_dt'].notna()) &
+        (df_reclamos['Fecha_formateada_dt'].dt.date == hoy)
+    ]
+    
+    st.write(f"Reclamos resueltos hoy: {len(resueltos_hoy)}")
+    if not resueltos_hoy.empty:
+        st.dataframe(resueltos_hoy[['ID Reclamo', 'Técnico', 'Fecha_formateada', 'Fecha_formateada_dt']])
+        
+        # Mostrar por técnico
+        st.write("**Resueltos por técnico hoy:**")
+        tecnicos_count = resueltos_hoy['Técnico'].value_counts()
+        for tecnico, count in tecnicos_count.items():
+            st.write(f"- {tecnico}: {count} resueltos")
+    else:
+        st.write("**Últimos 5 reclamos resueltos (de cualquier fecha):**")
+        ultimos_resueltos = df_reclamos[df_reclamos['Estado'] == 'Resuelto'].nlargest(5, 'Fecha_formateada_dt')
+        st.dataframe(ultimos_resueltos[['ID Reclamo', 'Técnico', 'Fecha_formateada', 'Fecha_formateada_dt']])
+
+
 def render_reporte_diario(df_reclamos):
     """Renderiza en Streamlit el botón para descargar el reporte diario en PNG."""
     st.subheader("📊 Reporte Diario (Imagen PNG)")
+    
+    # Botón de debug
+    if st.button("🔍 Debug Fechas Cierre"):
+        debug_fechas_cierre(df_reclamos)
+    
     if df_reclamos.empty:
         st.warning("No hay datos para generar el reporte.")
         return
