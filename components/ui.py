@@ -52,3 +52,38 @@ def badge(text, type="primary"):
         {text}
     </span>
     """
+
+
+def breadcrumb(current_page):
+    """Componente de breadcrumb elegante"""
+    pages = {
+        "Inicio": "🏠",
+        "Reclamos cargados": "📊", 
+        "Gestión de clientes": "👥",
+        "Imprimir reclamos": "🖨️",
+        "Seguimiento técnico": "🔧",
+        "Cierre de Reclamos": "✅"
+    }
+    
+    return f"""
+    <div style="
+        display: flex; 
+        align-items: center; 
+        gap: 0.5rem; 
+        margin: 1.5rem 0; 
+        padding: 1rem; 
+        background: var(--bg-surface); 
+        border-radius: var(--radius-lg); 
+        border: 1px solid var(--border-color);
+        font-size: 0.95rem;
+    ">
+        <span style="color: var(--text-muted); display: flex; align-items: center; gap: 0.25rem;">
+            <span>📋</span>
+            <span>Estás en:</span>
+        </span>
+        <span style="color: var(--primary-color); display: flex; align-items: center; gap: 0.25rem;">
+            <span>{pages.get(current_page, '📋')}</span>
+            <span style="font-weight: 500;">{current_page}</span>
+        </span>
+    </div>
+    """

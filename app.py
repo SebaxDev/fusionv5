@@ -51,10 +51,11 @@ from components.reclamos.cierre import render_cierre_reclamos
 from components.resumen_jornada import render_resumen_jornada
 from components.notifications import init_notification_manager
 from components.notification_bell import render_notification_bell
-
 from components.auth import has_permission, check_authentication, render_login
 from components.navigation import render_sidebar_navigation, render_user_info
 from components.metrics_dashboard import render_metrics_dashboard, metric_card
+from components.ui import breadcrumb, metric_card, card, badge
+from utils.helpers import show_warning, show_error, show_success, show_info, format_phone_number, format_dni, get_current_datetime, format_datetime, truncate_text, is_valid_email, safe_float_conversion, safe_int_conversion, get_status_badge, format_currency
 
 # Utils
 from utils.styles import get_main_styles, get_loading_spinner
@@ -352,7 +353,7 @@ with st.sidebar:
     
     # Información de usuario
     render_user_info()
-    
+
     # Selector de modo oscuro
     col1, col2 = st.columns([1, 3])
     with col1:
@@ -486,20 +487,26 @@ st.session_state.df_usuarios = df_usuarios
 
 st.markdown("---")
 st.markdown("""
-<div style="text-align: center; padding: 2rem 0; background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%); border-radius: var(--radius-xl); margin-bottom: 2rem; border: 1px solid var(--border-color);">
-    <h1 style="margin: 0; background: linear-gradient(135deg, #66D9EF 0%, #F92672 50%, #A6E22E 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-        Fusion Reclamos CRM
+<div style="text-align: center; padding: 2.5rem 0; background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%); border-radius: var(--radius-xl); margin: 2rem 0; border: 1px solid var(--border-color); box-shadow: var(--shadow-lg);">
+    <h1 style="margin: 0; background: linear-gradient(135deg, #66D9EF 0%, #F92672 30%, #A6E22E 70%, #AE81FF 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 2.8rem;">
+        🚀 Fusion Reclamos CRM
     </h1>
-    <p style="color: var(--text-secondary); font-size: 1.1rem; margin: 0.5rem 0 0 0;">
-        Sistema profesional de gestión de reclamos técnicos
+    <p style="color: var(--text-secondary); font-size: 1.2rem; margin: 0.75rem 0 0 0; font-weight: 400;">
+        Sistema profesional de gestión técnica
     </p>
+    <div style="margin-top: 1rem;">
+        <span style="background: var(--primary-color); color: #272822; padding: 0.25rem 1rem; border-radius: var(--radius-md); font-size: 0.9rem; font-weight: 500;">
+            v2.3.0
+        </span>
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
-st.markdown("---")
-
 # Dashboard de métricas
 render_metrics_dashboard(df_reclamos, is_mobile=is_mobile())
+
+# BREADCRUMB DE NAVEGACIÓN
+st.markdown(breadcrumb(opcion), unsafe_allow_html=True)
 
 # --------------------------
 # RUTEO DE COMPONENTES
