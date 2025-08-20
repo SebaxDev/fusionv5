@@ -53,8 +53,8 @@ from components.notifications import init_notification_manager
 from components.notification_bell import render_notification_bell
 
 from components.auth import has_permission, check_authentication, render_login
-from components.navigation import render_navigation
-from components.metrics_dashboard import render_metrics_dashboard
+from components.navigation import render_sidebar_navigation, render_user_info
+from components.metrics_dashboard import render_metrics_dashboard, metric_card
 from components.user_widget import render_user_widget
 
 # Utils
@@ -63,6 +63,7 @@ from utils.data_manager import safe_get_sheet_data, safe_normalize, update_sheet
 from utils.api_manager import api_manager, init_api_session_state
 from utils.pdf_utils import agregar_pie_pdf
 from utils.date_utils import parse_fecha, es_fecha_valida, format_fecha, ahora_argentina
+from utils.permissions import has_permission
 
 # --------------------------
 # FUNCIONES AUXILIARES OPTIMIZADAS
@@ -320,11 +321,17 @@ st.session_state.df_usuarios = df_usuarios
 # --------------------------
 # CONFIGURACIÓN DE PÁGINA
 # --------------------------
+# Navegación optimizada - SOLO para móvil mantener la actual
 if is_mobile():
-    st.set_page_config(page_title="Fusion Reclamos", page_icon="📋", layout="centered", initial_sidebar_state="collapsed")
+    opcion = st.selectbox(
+        "Menú principal",
+        options=["Inicio", "Reclamos cargados", "Cierre de Reclamos"],
+        index=0,
+        key="mobile_nav"
+    )
 else:
-    st.set_page_config(page_title="Fusion Reclamos CRM", page_icon="📋", layout="wide", initial_sidebar_state="collapsed",
-                       menu_items={'About': "Sistema de gestión de reclamos v2.3"})
+    # Para desktop, usar la navegación por estado de sesión
+    opcion = st.session_state.get('current_page', 'Inicio')
 
 # 🔹 Inicializar modo oscuro con preferencia persistida
 init_modo_oscuro()
@@ -335,41 +342,66 @@ st.markdown(get_main_styles(dark_mode=st.session_state.modo_oscuro), unsafe_allo
 # SIDEBAR
 # --------------------------
 with st.sidebar:
-    st.markdown("### Panel de Control")
-    st.checkbox("🌙 Modo oscuro", value=st.session_state.modo_oscuro,
-                key=MODO_OSCURO_KEY, on_change=_on_toggle_modo_oscuro,
-                help="Cambiar entre tema claro y oscuro")
+    # Header del sidebar
+    st.markdown("""
+    <div style="text-align: center; padding: 1rem 0; border-bottom: 1px solid var(--border-color); margin-bottom: 1rem;">
+        <h2 style="margin: 0; color: var(--primary-color);">📋 Fusion CRM</h2>
+        <p style="color: var(--text-secondary); margin: 0.25rem 0 0 0; font-size: 0.9rem;">
+            Panel de Control
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Selector de modo oscuro
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        st.markdown("<div style='font-size: 1.5rem;'>🌙</div>", unsafe_allow_html=True)
+    with col2:
+        st.checkbox("Modo oscuro", value=st.session_state.modo_oscuro,
+                    key=MODO_OSCURO_KEY, on_change=_on_toggle_modo_oscuro,
+                    help="Cambiar entre tema claro y oscuro", label_visibility="visible")
+    
+    # Notificaciones
     if st.session_state.auth.get("logged_in", False):
         render_notification_bell()
+    
     st.markdown("---")
-    render_user_widget()
-        
+    
+    # Navegación profesional
+    render_sidebar_navigation()
+    
+    # Información de usuario
+    render_user_info()
+    
     # Herramientas de administrador (solo visible para admins)
     if user_role == 'admin':
         st.markdown("---")
         st.markdown("**🔧 Herramientas Admin**")
         if st.button("🆔 Generar UUIDs para registros", 
                     help="Genera IDs únicos para registros existentes que no los tengan",
-                    disabled=st.session_state.get('uuid_migration_in_progress', False)):
+                    disabled=st.session_state.get('uuid_migration_in_progress', False),
+                    use_container_width=True):
             st.session_state.uuid_migration_in_progress = True
             with st.spinner("Migrando UUIDs..."):
                 if migrar_uuids_existentes(sheet_reclamos, sheet_clientes):
                     st.rerun()
             st.session_state.uuid_migration_in_progress = False
     
+    # Footer del sidebar
+    st.markdown("---")
     st.markdown(f"""
-    <div style="margin-top: 20px;">
-        <p style="margin:0;"><strong>Versión:</strong> 2.3.0</p>
-        <p style="margin:0;"><strong>Última actualización:</strong> {datetime.now().strftime("%d/%m/%Y %H:%M")}</p>
+    <div style="margin-top: 1rem;">
+        <p style="margin:0; font-size: 0.8rem; color: var(--text-secondary);"><strong>Versión:</strong> 2.3.0</p>
+        <p style="margin:0; font-size: 0.8rem; color: var(--text-secondary);"><strong>Actualizado:</strong> {datetime.now().strftime("%d/%m/%Y %H:%M")}</p>
     </div>
     """, unsafe_allow_html=True)
     
     st.markdown("""
-    <div style='text-align: center; margin-top: 20px; font-size: 0.9em; color: gray;'>
-        Hecho con amor por:<br> 
-        <a href="https://instagram.com/mellamansebax" target="_blank" style="text-decoration: none; color: inherit; font-weight: bold;">
+    <div style='text-align: center; margin-top: 1rem; font-size: 0.8rem; color: var(--text-muted);'>
+        Hecho con 💜 por<br> 
+        <a href="https://instagram.com/mellamansebax" target="_blank" style="text-decoration: none; color: var(--primary-color); font-weight: 500;">
             Sebastián Andrés
-        </a> 💜
+        </a>
     </div>
     """, unsafe_allow_html=True)
 
@@ -456,9 +488,11 @@ st.session_state.df_usuarios = df_usuarios
 
 st.markdown("---")
 st.markdown("""
-<div style="text-align: center; padding: 2rem 0;">
-    <h1>📋 Fusion Reclamos CRM</h1>
-    <p style="color: var(--text-secondary); font-size: 1.1rem;">
+<div style="text-align: center; padding: 2rem 0; background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%); border-radius: var(--radius-xl); margin-bottom: 2rem; border: 1px solid var(--border-color);">
+    <h1 style="margin: 0; background: linear-gradient(135deg, #66D9EF 0%, #F92672 50%, #A6E22E 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+        📋 Fusion Reclamos CRM
+    </h1>
+    <p style="color: var(--text-secondary); font-size: 1.1rem; margin: 0.5rem 0 0 0;">
         Sistema profesional de gestión de reclamos técnicos
     </p>
 </div>
