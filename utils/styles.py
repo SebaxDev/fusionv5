@@ -1,34 +1,35 @@
-# styles.py - Versión renovada
+# styles.py - Versión con modo oscuro Monokai
 """Estilos CSS profesionales tipo CRM"""
 
 def get_main_styles(dark_mode=True):
     """Devuelve estilos CSS profesionales para modo claro/oscuro"""
     
     if dark_mode:
+        # PALETA MONOKAI (modo oscuro gris)
         theme_vars = """
-            --primary-color: #4361EE;
-            --primary-light: #4895EF;
-            --secondary-color: #7209B7;
-            --success-color: #06D6A0;
-            --warning-color: #FFD166;
-            --danger-color: #EF476F;
-            --info-color: #118AB2;
+            --primary-color: #66D9EF;     /* Azul verdoso Monokai */
+            --primary-light: #78C6E9;     /* Azul más claro */
+            --secondary-color: #F92672;   /* Magenta Monokai */
+            --success-color: #A6E22E;     /* Verde Monokai */
+            --warning-color: #FD971F;     /* Naranja Monokai */
+            --danger-color: #FF6188;      /* Rosa-rojo Monokai */
+            --info-color: #AE81FF;        /* Púrpura Monokai */
             
-            --bg-primary: #0F172A;
-            --bg-secondary: #1E293B;
-            --bg-surface: #1E293B;
-            --bg-card: #334155;
+            --bg-primary: #272822;        /* Fondo principal Monokai */
+            --bg-secondary: #2D2E27;      /* Fondo secundario */
+            --bg-surface: #3E3D32;        /* Superficie de elementos */
+            --bg-card: #383830;           /* Tarjetas */
             
-            --text-primary: #F8FAFC;
-            --text-secondary: #CBD5E1;
-            --text-muted: #94A3B8;
+            --text-primary: #F8F8F2;      /* Texto principal */
+            --text-secondary: #CFCFC2;    /* Texto secundario */
+            --text-muted: #75715E;        /* Texto atenuado */
             
-            --border-color: #334155;
-            --border-light: #475569;
+            --border-color: #49483E;      /* Color de bordes */
+            --border-light: #5E5D56;      /* Bordes claros */
             
-            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
-            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
-            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.3), 0 2px 4px -1px rgba(0,0,0,0.2);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.25);
             
             --radius-sm: 0.25rem;
             --radius-md: 0.375rem;
@@ -36,6 +37,7 @@ def get_main_styles(dark_mode=True):
             --radius-xl: 0.75rem;
         """
     else:
+        # PALETA ORIGINAL (modo claro profesional)
         theme_vars = """
             --primary-color: #3B82F6;
             --primary-light: #60A5FA;
@@ -144,13 +146,14 @@ def get_main_styles(dark_mode=True):
     
     .stButton > button:focus {{
         outline: none;
-        box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.5);
+        box-shadow: 0 0 0 3px rgba(102, 217, 239, 0.3);
     }}
     
     /* Botón primario */
     .stButton > button:first-child {{
         background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
-        color: white;
+        color: #272822;
+        font-weight: 600;
     }}
     
     .stButton > button:first-child:hover {{
@@ -168,7 +171,7 @@ def get_main_styles(dark_mode=True):
     
     .stButton > button:not(:first-child):hover {{
         background: var(--primary-color);
-        color: white;
+        color: #272822;
         transform: translateY(-2px);
         box-shadow: var(--shadow-lg);
     }}
@@ -226,7 +229,7 @@ def get_main_styles(dark_mode=True):
     .stNumberInput > div > div > input:focus,
     .stDateInput > div > div > input:focus {{
         border-color: var(--primary-color);
-        box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+        box-shadow: 0 0 0 3px rgba(102, 217, 239, 0.2);
         outline: none;
     }}
     
@@ -253,6 +256,14 @@ def get_main_styles(dark_mode=True):
         justify-content: flex-start;
         margin-bottom: 0.5rem;
         border-radius: var(--radius-md);
+        background: transparent;
+        color: var(--text-primary);
+        border: 1px solid transparent;
+    }}
+    
+    .css-1d391kg .stButton > button:hover {{
+        background: var(--bg-surface);
+        border-color: var(--primary-color);
     }}
     
     /* MEJORAS PARA TABLAS */
@@ -265,7 +276,7 @@ def get_main_styles(dark_mode=True):
     
     .dataframe thead th {{
         background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
-        color: white;
+        color: #272822;
         font-weight: 600;
         padding: 0.75rem;
         text-align: left;
@@ -321,23 +332,28 @@ def get_main_styles(dark_mode=True):
     }}
     
     .badge-primary {{
-        background-color: rgba(67, 97, 238, 0.1);
+        background-color: rgba(102, 217, 239, 0.15);
         color: var(--primary-color);
     }}
     
     .badge-success {{
-        background-color: rgba(6, 214, 160, 0.1);
+        background-color: rgba(166, 226, 46, 0.15);
         color: var(--success-color);
     }}
     
     .badge-warning {{
-        background-color: rgba(255, 209, 102, 0.1);
+        background-color: rgba(253, 151, 31, 0.15);
         color: var(--warning-color);
     }}
     
     .badge-danger {{
-        background-color: rgba(239, 71, 111, 0.1);
+        background-color: rgba(255, 97, 136, 0.15);
         color: var(--danger-color);
+    }}
+    
+    .badge-info {{
+        background-color: rgba(174, 129, 255, 0.15);
+        color: var(--info-color);
     }}
     
     /* GRID SYSTEM MEJORADO */
@@ -390,7 +406,7 @@ def get_main_styles(dark_mode=True):
     """
 
 def get_loading_spinner():
-    """Spinner de carga moderno"""
+    """Spinner de carga moderno con estilo Monokai"""
     return """
     <div style="
         position: fixed;
@@ -401,16 +417,16 @@ def get_loading_spinner():
         display: flex;
         justify-content: center;
         align-items: center;
-        background-color: rgba(15, 23, 42, 0.8);
+        background-color: rgba(39, 40, 34, 0.9);
         z-index: 9999;
         backdrop-filter: blur(4px);
     ">
         <div style="
             width: 60px;
             height: 60px;
-            border: 3px solid rgba(255,255,255,0.1);
+            border: 3px solid rgba(73, 72, 62, 0.3);
             border-radius: 50%;
-            border-top-color: #4361EE;
+            border-top-color: #66D9EF;
             animation: spin 1s ease-in-out infinite;
             position: relative;
         ">
@@ -423,7 +439,7 @@ def get_loading_spinner():
                 bottom: -3px;
                 border: 3px solid transparent;
                 border-radius: 50%;
-                border-top-color: #7209B7;
+                border-top-color: #F92672;
                 animation: spin 1.5s ease infinite;
                 opacity: 0.7;
             "></div>
