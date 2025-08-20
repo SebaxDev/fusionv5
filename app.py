@@ -350,6 +350,9 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
     
+    # Información de usuario
+    render_user_info()
+    
     # Selector de modo oscuro
     col1, col2 = st.columns([1, 3])
     with col1:
@@ -367,9 +370,6 @@ with st.sidebar:
     
     # Navegación profesional
     render_sidebar_navigation()
-    
-    # Información de usuario
-    render_user_info()
     
     # Herramientas de administrador (solo visible para admins)
     if user_role == 'admin':
