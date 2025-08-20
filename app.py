@@ -55,7 +55,7 @@ from components.auth import has_permission, check_authentication, render_login
 from components.navigation import render_sidebar_navigation, render_user_info
 from components.metrics_dashboard import render_metrics_dashboard, metric_card
 from components.ui import breadcrumb, metric_card, card, badge
-from utils.helpers import show_warning, show_error, show_success, show_info, format_phone_number, format_dni, get_current_datetime, format_datetime, truncate_text, is_valid_email, safe_float_conversion, safe_int_conversion, get_status_badge, format_currency
+from utils.helpers import show_warning, show_error, show_success, show_info, format_phone_number, format_dni, get_current_datetime, format_datetime, truncate_text, is_valid_email, safe_float_conversion, safe_int_conversion, get_status_badge, format_currency, get_breadcrumb_icon
 
 # Utils
 from utils.styles import get_main_styles, get_loading_spinner
