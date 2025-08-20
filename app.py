@@ -55,7 +55,6 @@ from components.notification_bell import render_notification_bell
 from components.auth import has_permission, check_authentication, render_login
 from components.navigation import render_sidebar_navigation, render_user_info
 from components.metrics_dashboard import render_metrics_dashboard, metric_card
-from components.user_widget import render_user_widget
 
 # Utils
 from utils.styles import get_main_styles, get_loading_spinner
