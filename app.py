@@ -320,7 +320,7 @@ st.session_state.df_usuarios = df_usuarios
 # --------------------------
 # CONFIGURACIÓN DE PÁGINA
 # --------------------------
-# Navegación optimizada - SOLO para móvil mantener la actual
+# Navegación optimizada
 if is_mobile():
     opcion = st.selectbox(
         "Menú principal",
@@ -329,7 +329,6 @@ if is_mobile():
         key="mobile_nav"
     )
 else:
-    # Para desktop, usar la navegación por estado de sesión
     opcion = st.session_state.get('current_page', 'Inicio')
 
 # 🔹 Inicializar modo oscuro con preferencia persistida
@@ -501,14 +500,6 @@ st.markdown("---")
 
 # Dashboard de métricas
 render_metrics_dashboard(df_reclamos, is_mobile=is_mobile())
-
-# Navegación optimizada
-opcion = render_navigation() if not is_mobile() else st.selectbox(
-    "Menú principal",
-    options=["Inicio", "Reclamos cargados", "Cierre de Reclamos"],
-    index=0,
-    key="mobile_nav"
-)
 
 # --------------------------
 # RUTEO DE COMPONENTES
