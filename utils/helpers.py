@@ -107,3 +107,15 @@ def format_currency(amount):
         return f"${amount_float:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
     except:
         return str(amount)
+
+def get_breadcrumb_icon(page_name):
+    """Devuelve el icono correspondiente para el breadcrumb"""
+    icons = {
+        "Inicio": "🏠",
+        "Reclamos cargados": "📊",
+        "Gestión de clientes": "👥",
+        "Imprimir reclamos": "🖨️",
+        "Seguimiento técnico": "🔧",
+        "Cierre de Reclamos": "✅"
+    }
+    return icons.get(page_name, "📋")

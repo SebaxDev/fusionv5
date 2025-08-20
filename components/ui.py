@@ -24,15 +24,37 @@ def card(title, content, icon=None, actions=None):
     
     st.markdown("</div>", unsafe_allow_html=True)
 
-def metric_card(value, label, icon, trend=None):
-    """Tarjeta de métrica elegante"""
-    trend_html = f"<span style='color: {trend['color']}; font-size: 0.8rem;'>{trend['value']}</span>" if trend else ""
+def metric_card(value, label, icon, trend=None, subtitle=None):
+    """Tarjeta de métrica elegante mejorada"""
+    trend_html = ""
+    if trend:
+        trend_icon = "📈" if trend['value'].startswith('+') else "📉"
+        trend_html = f"""
+        <div style='color: {trend["color"]}; font-size: 0.8rem; margin-top: 0.25rem;
+                    display: flex; align-items: center; gap: 0.25rem;'>
+            {trend_icon} {trend['value']}
+        </div>
+        """
+    
+    subtitle_html = f"<div style='color: var(--text-muted); font-size: 0.85rem; margin-top: 0.25rem;'>{subtitle}</div>" if subtitle else ""
     
     return f"""
-    <div class='card' style='text-align: center;'>
-        <div style='font-size: 2rem; color: var(--primary-color); margin-bottom: 0.5rem;'>{icon}</div>
-        <div style='font-size: 1.5rem; font-weight: 600; color: var(--text-primary);'>{value}</div>
-        <div style='color: var(--text-secondary); margin-bottom: 0.5rem;'>{label}</div>
+    <div class='card' style='text-align: center; padding: 1.5rem; background: var(--bg-card);
+                            border: 1px solid var(--border-color); transition: all 0.3s ease;'>
+        <div style='font-size: 2.5rem; color: var(--primary-color); margin-bottom: 0.75rem;
+                    background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+                    -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>
+            {icon}
+        </div>
+        <div style='font-size: 2rem; font-weight: 700; color: var(--text-primary); 
+                    margin-bottom: 0.5rem;'>
+            {value}
+        </div>
+        <div style='color: var(--text-secondary); font-weight: 600; font-size: 1rem;
+                    margin-bottom: 0.5rem;'>
+            {label}
+        </div>
+        {subtitle_html}
         {trend_html}
     </div>
     """
@@ -54,9 +76,9 @@ def badge(text, type="primary"):
     """
 
 
-def breadcrumb(current_page):
-    """Componente de breadcrumb elegante"""
-    pages = {
+def breadcrumb(current_page, show_date=True):
+    """Componente de breadcrumb elegante mejorado"""
+    icons = {
         "Inicio": "🏠",
         "Reclamos cargados": "📊", 
         "Gestión de clientes": "👥",
@@ -65,25 +87,44 @@ def breadcrumb(current_page):
         "Cierre de Reclamos": "✅"
     }
     
+    date_section = ""
+    if show_date:
+        date_section = f"""
+        <div style="flex: 1;"></div>
+        <span style="color: var(--text-muted); font-size: 0.85rem;">
+            {datetime.now().strftime('%d/%m/%Y %H:%M')}
+        </span>
+        """
+    
     return f"""
     <div style="
         display: flex; 
         align-items: center; 
-        gap: 0.5rem; 
-        margin: 1.5rem 0; 
-        padding: 1rem; 
-        background: var(--bg-surface); 
-        border-radius: var(--radius-lg); 
+        gap: 0.75rem; 
+        margin: 2rem 0 1.5rem 0; 
+        padding: 1.25rem; 
+        background: var(--bg-card); 
+        border-radius: var(--radius-xl); 
         border: 1px solid var(--border-color);
+        box-shadow: var(--shadow-sm);
         font-size: 0.95rem;
     ">
-        <span style="color: var(--text-muted); display: flex; align-items: center; gap: 0.25rem;">
-            <span>📋</span>
+        <span style="color: var(--text-muted); display: flex; align-items: center; gap: 0.5rem;">
+            <span style="font-size: 1.2rem;">📋</span>
             <span>Estás en:</span>
         </span>
-        <span style="color: var(--primary-color); display: flex; align-items: center; gap: 0.25rem;">
-            <span>{pages.get(current_page, '📋')}</span>
-            <span style="font-weight: 500;">{current_page}</span>
-        </span>
+        
+        <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem;
+                    background: linear-gradient(135deg, var(--bg-surface), var(--bg-secondary));
+                    border-radius: var(--radius-lg); border: 1px solid var(--border-light);">
+            <span style="font-size: 1.1rem; color: var(--primary-color);">
+                {icons.get(current_page, '📋')}
+            </span>
+            <span style="color: var(--primary-color); font-weight: 600;">
+                {current_page}
+            </span>
+        </div>
+        
+        {date_section}
     </div>
     """

@@ -485,24 +485,80 @@ st.session_state.df_usuarios = df_usuarios
 # INTERFAZ PRINCIPAL OPTIMIZADA
 # --------------------------
 
+# Header principal mejorado
 st.markdown("""
-<div style="text-align: center; padding: 2.5rem 0; background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%); border-radius: var(--radius-xl); margin: 2rem 0; border: 1px solid var(--border-color); box-shadow: var(--shadow-lg);">
-    <h1 style="margin: 0; background: linear-gradient(135deg, #66D9EF 0%, #F92672 30%, #A6E22E 70%, #AE81FF 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 2.8rem;">
-        Fusion Reclamos CRM
+<div style="text-align: center; padding: 3rem 0; background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-surface) 100%); 
+            border-radius: var(--radius-xl); margin: 2rem 0; border: 1px solid var(--border-color); 
+            box-shadow: var(--shadow-lg); position: relative; overflow: hidden;">
+    
+    <div style="position: absolute; top: -50px; right: -50px; width: 200px; height: 200px; 
+                background: linear-gradient(135deg, var(--primary-color) 0%, transparent 70%); 
+                border-radius: 50%; opacity: 0.1;"></div>
+    <div style="position: absolute; bottom: -30px; left: -30px; width: 150px; height: 150px; 
+                background: linear-gradient(135deg, var(--secondary-color) 0%, transparent 70%); 
+                border-radius: 50%; opacity: 0.1;"></div>
+    
+    <h1 style="margin: 0; background: linear-gradient(135deg, #66D9EF 0%, #F92672 30%, #A6E22E 70%, #AE81FF 100%); 
+               -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 3rem;
+               font-weight: 700; letter-spacing: -0.5px; margin-bottom: 0.5rem;">
+        🚀 Fusion CRM
     </h1>
-    <div style="margin-top: 1rem;">
-        <span style="background: var(--primary-color); color: #272822; padding: 0.25rem 1rem; border-radius: var(--radius-md); font-size: 0.9rem; font-weight: 500;">
-            Sistema profesional en gestión de Reclamos
+    
+    <p style="color: var(--text-secondary); font-size: 1.2rem; margin: 0.5rem 0 1.5rem 0; font-weight: 400;">
+        Sistema profesional en gestión de reclamos
+    </p>
+    
+    <div style="display: inline-flex; gap: 1rem; flex-wrap: wrap; justify-content: center;">
+        <span style="background: linear-gradient(135deg, var(--primary-color), var(--primary-light)); 
+                    color: #272822; padding: 0.5rem 1.5rem; border-radius: var(--radius-xl); 
+                    font-size: 0.9rem; font-weight: 600; box-shadow: var(--shadow-md);">
+            📊 {:,} Reclamos
+        </span>
+        <span style="background: linear-gradient(135deg, var(--success-color), #86C23E); 
+                    color: #272822; padding: 0.5rem 1.5rem; border-radius: var(--radius-xl); 
+                    font-size: 0.9rem; font-weight: 600; box-shadow: var(--shadow-md);">
+            👥 {:,} Clientes
+        </span>
+        <span style="background: linear-gradient(135deg, var(--info-color), #BE95FF); 
+                    color: #272822; padding: 0.5rem 1.5rem; border-radius: var(--radius-xl); 
+                    font-size: 0.9rem; font-weight: 600; box-shadow: var(--shadow-md);">
+            ⚡ v2.3.0
         </span>
     </div>
 </div>
-""", unsafe_allow_html=True)
+""".format(len(df_reclamos), len(df_clientes)), unsafe_allow_html=True)
 
 # Dashboard de métricas
 render_metrics_dashboard(df_reclamos, is_mobile=is_mobile())
 
-# BREADCRUMB DE NAVEGACIÓN
-st.markdown(breadcrumb(opcion), unsafe_allow_html=True)
+# BREADCRUMB DE NAVEGACIÓN mejorado
+st.markdown(f"""
+<div style="
+    display: flex; 
+    align-items: center; 
+    gap: 0.5rem; 
+    margin: 2rem 0 1.5rem 0; 
+    padding: 1.25rem; 
+    background: var(--bg-card); 
+    border-radius: var(--radius-xl); 
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+    font-size: 0.95rem;
+">
+    <span style="color: var(--text-muted); display: flex; align-items: center; gap: 0.5rem;">
+        <span style="font-size: 1.2rem;">📋</span>
+        <span>Navegación:</span>
+    </span>
+    <span style="color: var(--primary-color); display: flex; align-items: center; gap: 0.5rem; font-weight: 600;">
+        <span style="font-size: 1.1rem;">{get_breadcrumb_icon(opcion)}</span>
+        <span>{opcion}</span>
+    </span>
+    <div style="flex: 1;"></div>
+    <span style="color: var(--text-muted); font-size: 0.85rem;">
+        {datetime.now().strftime('%d/%m/%Y %H:%M')}
+    </span>
+</div>
+""", unsafe_allow_html=True)
 
 # --------------------------
 # RUTEO DE COMPONENTES
