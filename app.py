@@ -485,7 +485,6 @@ st.session_state.df_usuarios = df_usuarios
 # INTERFAZ PRINCIPAL OPTIMIZADA
 # --------------------------
 
-st.markdown("---")
 st.markdown("""
 <div style="text-align: center; padding: 2.5rem 0; background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%); border-radius: var(--radius-xl); margin: 2rem 0; border: 1px solid var(--border-color); box-shadow: var(--shadow-lg);">
     <h1 style="margin: 0; background: linear-gradient(135deg, #66D9EF 0%, #F92672 30%, #A6E22E 70%, #AE81FF 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 2.8rem;">
