@@ -59,8 +59,8 @@ def metric_card(value, label, icon, trend=None, subtitle=None):
     </div>
     """
 
-def badge(text, type="primary"):
-    """Componente de badge elegante"""
+def badge(text, type="primary", icon=None):
+    """Componente de badge elegante con iconos"""
     color_map = {
         "primary": "var(--primary-color)",
         "success": "var(--success-color)",
@@ -69,9 +69,21 @@ def badge(text, type="primary"):
         "info": "var(--info-color)"
     }
     
+    icon_html = f"<span style='margin-right: 0.25rem;'>{icon}</span>" if icon else ""
+    
     return f"""
-    <span class='badge badge-{type}' style='background-color: rgba({color_map[type]}, 0.1); color: {color_map[type]};'>
-        {text}
+    <span class='badge badge-{type}' style='
+        background-color: rgba({color_map[type].replace('var(', '').replace(')', '')}, 0.15); 
+        color: {color_map[type]};
+        display: inline-flex;
+        align-items: center;
+        padding: 0.35rem 0.9rem;
+        border-radius: var(--radius-xl);
+        font-size: 0.8rem;
+        font-weight: 600;
+        border: 1px solid rgba({color_map[type].replace('var(', '').replace(')', '')}, 0.3);
+    '>
+        {icon_html}{text}
     </span>
     """
 
@@ -127,4 +139,26 @@ def breadcrumb(current_page, show_date=True):
         
         {date_section}
     </div>
+    """
+def loading_indicator(message="Cargando datos..."):
+    """Indicador de carga elegante para componentes UI"""
+    return f"""
+    <div style="text-align: center; padding: 2rem;">
+        <div style="
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(102, 217, 239, 0.3);
+            border-top: 3px solid #66D9EF;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        "></div>
+        <p style="color: var(--text-secondary); margin: 0; font-size: 0.9rem;">{message}</p>
+    </div>
+    <style>
+    @keyframes spin {{
+        0% {{ transform: rotate(0deg); }}
+        100% {{ transform: rotate(360deg); }}
+    }}
+    </style>
     """

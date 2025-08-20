@@ -54,11 +54,11 @@ from components.notification_bell import render_notification_bell
 from components.auth import has_permission, check_authentication, render_login
 from components.navigation import render_sidebar_navigation, render_user_info
 from components.metrics_dashboard import render_metrics_dashboard, metric_card
-from components.ui import breadcrumb, metric_card, card, badge
+from components.ui import breadcrumb, metric_card, card, badge, loading_indicator
 from utils.helpers import show_warning, show_error, show_success, show_info, format_phone_number, format_dni, get_current_datetime, format_datetime, truncate_text, is_valid_email, safe_float_conversion, safe_int_conversion, get_status_badge, format_currency, get_breadcrumb_icon
 
 # Utils
-from utils.styles import get_main_styles, get_loading_spinner
+from utils.styles import get_main_styles, get_loading_spinner, loading_indicator
 from utils.data_manager import safe_get_sheet_data, safe_normalize, update_sheet_data, batch_update_sheet
 from utils.api_manager import api_manager, init_api_session_state
 from utils.pdf_utils import agregar_pie_pdf
@@ -386,21 +386,25 @@ with st.sidebar:
                     st.rerun()
             st.session_state.uuid_migration_in_progress = False
     
-    # Footer del sidebar
-    st.markdown("---")
+    # En el sidebar, mejora el footer:
     st.markdown(f"""
-    <div style="margin-top: 1rem;">
-        <p style="margin:0; font-size: 0.8rem; color: var(--text-secondary);"><strong>Versión:</strong> 2.3.0</p>
-        <p style="margin:0; font-size: 0.8rem; color: var(--text-secondary);"><strong>Actualizado:</strong> {datetime.now().strftime("%d/%m/%Y %H:%M")}</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.markdown("""
-    <div style='text-align: center; margin-top: 1rem; font-size: 0.8rem; color: var(--text-muted);'>
-        Hecho con 💜 por<br> 
-        <a href="https://instagram.com/mellamansebax" target="_blank" style="text-decoration: none; color: var(--primary-color); font-weight: 500;">
-            Sebastián Andrés
-        </a>
+    <div style="margin-top: 2rem; padding: 1rem; background: var(--bg-surface); border-radius: var(--radius-lg); border: 1px solid var(--border-color);">
+        <div style="text-align: center; margin-bottom: 1rem;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">⚡</div>
+            <p style="margin:0; font-size: 0.9rem; color: var(--text-secondary);"><strong>Versión:</strong> 2.3.0</p>
+            <p style="margin:0; font-size: 0.8rem; color: var(--text-muted);">Ultima actualización</p>
+            <p style="margin:0; font-size: 0.9rem; color: var(--primary-color); font-weight: 600;">{ahora_argentina().strftime('%d/%m/%Y %H:%M')}</p>
+        </div>
+        
+        <div style="text-align: center; padding: 1rem 0; border-top: 1px solid var(--border-light);">
+            <p style="margin:0; font-size: 0.8rem; color: var(--text-muted);">
+                Desarrollado con 💜 por
+            </p>
+            <a href="https://instagram.com/mellamansebax" target="_blank" 
+               style="color: var(--primary-color); text-decoration: none; font-weight: 600; font-size: 0.9rem;">
+                Sebastián Andrés
+            </a>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -525,7 +529,7 @@ st.markdown(f"""
     </span>
     <div style="flex: 1;"></div>
     <span style="color: var(--text-muted); font-size: 0.85rem;">
-        {datetime.now().strftime('%d/%m/%Y %H:%M')}
+        {ahora_argentina().strftime('%d/%m/%Y %H:%M')}
     </span>
 </div>
 """, unsafe_allow_html=True)

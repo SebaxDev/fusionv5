@@ -135,7 +135,7 @@ def get_main_styles(dark_mode=True):
         border-radius: var(--radius-lg);
         padding: 0.75rem 1.5rem;
         font-weight: 500;
-        transition: all 0.2s ease;
+        transition: all 0.3s ease;
         cursor: pointer;
         box-shadow: var(--shadow-md);
         display: inline-flex;
@@ -154,12 +154,13 @@ def get_main_styles(dark_mode=True):
         background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
         color: #272822;
         font-weight: 600;
+        border: none;
     }}
     
     .stButton > button:first-child:hover {{
+        background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary-color) 100%);
         transform: translateY(-2px);
         box-shadow: var(--shadow-lg);
-        background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary-color) 100%);
     }}
     
     /* Botón secundario */
@@ -184,12 +185,13 @@ def get_main_styles(dark_mode=True):
         margin-bottom: 1.5rem;
         box-shadow: var(--shadow-md);
         border: 1px solid var(--border-color);
-        transition: all 0.2s ease;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }}
     
     .card:hover {{
-        box-shadow: var(--shadow-lg);
-        transform: translateY(-2px);
+        transform: translateY(-4px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+        border-color: var(--primary-color);
     }}
     
     .card-header {{
@@ -272,25 +274,29 @@ def get_main_styles(dark_mode=True):
         overflow: hidden;
         box-shadow: var(--shadow-md);
         border: 1px solid var(--border-color);
+        margin: 1rem 0;
     }}
     
     .dataframe thead th {{
         background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
         color: #272822;
         font-weight: 600;
-        padding: 0.75rem;
+        padding: 1rem;
         text-align: left;
+        border: none;
     }}
     
     .dataframe tbody td {{
-        padding: 0.75rem;
-        border-bottom: 1px solid var(--border-color);
+        padding: 0.875rem 1rem;
+        border-bottom: 1px solid var(--border-light);
         background-color: var(--bg-surface);
         color: var(--text-primary);
+        transition: all 0.2s ease;
     }}
     
     .dataframe tbody tr:hover td {{
         background-color: var(--bg-secondary);
+        transform: scale(1.02);
     }}
     
     /* NOTIFICACIONES Y ALERTAS MEJORADAS */
@@ -323,12 +329,11 @@ def get_main_styles(dark_mode=True):
     .badge {{
         display: inline-flex;
         align-items: center;
-        padding: 0.25rem 0.75rem;
-        border-radius: 9999px;
-        font-size: 0.75rem;
+        padding: 0.35rem 0.9rem;
+        border-radius: var(--radius-xl);
+        font-size: 0.8rem;
         font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.025em;
+        border: 1px solid rgba(102, 217, 239, 0.3);
     }}
     
     .badge-primary {{
@@ -381,6 +386,19 @@ def get_main_styles(dark_mode=True):
         background: var(--text-muted);
     }}
     
+    /* EFECTO DE CARGA SKELETON */
+    .skeleton {{
+        background: linear-gradient(90deg, var(--bg-surface) 25%, var(--bg-secondary) 50%, var(--bg-surface) 75%);
+        background-size: 200% 100%;
+        animation: loading 1.5s infinite;
+        border-radius: var(--radius-md);
+    }}
+    
+    @keyframes loading {{
+        0% {{ background-position: 200% 0; }}
+        100% {{ background-position: -200% 0; }}
+    }}
+    
     /* RESPONSIVE DESIGN */
     @media (max-width: 768px) {{
         .main .block-container {{
@@ -406,7 +424,7 @@ def get_main_styles(dark_mode=True):
     """
 
 def get_loading_spinner():
-    """Spinner de carga moderno con estilo Monokai"""
+    """Spinner de carga moderno con estilo Monokai mejorado"""
     return """
     <div style="
         position: fixed;
@@ -417,32 +435,28 @@ def get_loading_spinner():
         display: flex;
         justify-content: center;
         align-items: center;
-        background-color: rgba(39, 40, 34, 0.9);
+        background-color: rgba(39, 40, 34, 0.95);
         z-index: 9999;
-        backdrop-filter: blur(4px);
+        backdrop-filter: blur(8px);
     ">
-        <div style="
-            width: 60px;
-            height: 60px;
-            border: 3px solid rgba(73, 72, 62, 0.3);
-            border-radius: 50%;
-            border-top-color: #66D9EF;
-            animation: spin 1s ease-in-out infinite;
-            position: relative;
-        ">
+        <div style="text-align: center;">
             <div style="
-                content: '';
-                position: absolute;
-                top: -3px;
-                left: -3px;
-                right: -3px;
-                bottom: -3px;
-                border: 3px solid transparent;
+                width: 80px;
+                height: 80px;
+                border: 4px solid rgba(73, 72, 62, 0.3);
                 border-radius: 50%;
-                border-top-color: #F92672;
-                animation: spin 1.5s ease infinite;
-                opacity: 0.7;
+                border-top-color: #66D9EF;
+                border-right-color: #F92672;
+                border-bottom-color: #A6E22E;
+                animation: spin 1.5s ease-in-out infinite;
+                margin-bottom: 1rem;
             "></div>
+            <p style="color: #F8F8F2; font-size: 1.1rem; font-weight: 500; margin: 0;">
+                Cargando Fusion CRM...
+            </p>
+            <p style="color: #75715E; font-size: 0.9rem; margin: 0.5rem 0 0 0;">
+                ⚡ Optimizado para rendimiento
+            </p>
         </div>
         <style>
         @keyframes spin {
@@ -450,4 +464,27 @@ def get_loading_spinner():
         }
         </style>
     </div>
+    """
+
+def loading_indicator(message="Cargando datos..."):
+    """Indicador de carga elegante"""
+    return f"""
+    <div style="text-align: center; padding: 2rem;">
+        <div style="
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(102, 217, 239, 0.3);
+            border-top: 3px solid #66D9EF;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        "></div>
+        <p style="color: var(--text-secondary); margin: 0; font-size: 0.9rem;">{message}</p>
+    </div>
+    <style>
+    @keyframes spin {{
+        0% {{ transform: rotate(0deg); }}
+        100% {{ transform: rotate(360deg); }}
+    }}
+    </style>
     """
