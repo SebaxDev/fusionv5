@@ -30,58 +30,8 @@ def _col_letter(col_name: str) -> str:
     return _excel_col_letter(idx)
 
 def mostrar_overlay_cargando(mensaje="Procesando..."):
-    """Usa el spinner estilo Monokai"""
-    st.markdown(f"""
-    <div style="
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        background-color: rgba(39, 40, 34, 0.95);
-        z-index: 9999;
-        backdrop-filter: blur(8px);
-    ">
-        <div style="text-align: center;">
-            <div style="
-                width: 80px;
-                height: 80px;
-                border: 4px solid rgba(73, 72, 62, 0.3);
-                border-radius: 50%;
-                border-top-color: #66D9EF;
-                border-right-color: #F92672;
-                border-bottom-color: #A6E22E;
-                animation: spin 1.5s ease-in-out infinite;
-                margin-bottom: 1rem;
-            "></div>
-            <p style="color: #F8F8F2; font-size: 1.1rem; font-weight: 500; margin: 0;">
-                {mensaje}
-            </p>
-        </div>
-        <style>
-        @keyframes spin {{
-            to {{ transform: rotate(360deg); }}
-        }}
-        </style>
-    </div>
-    """, unsafe_allow_html=True)
-    # Forzar renderizado inmediato
-    st.empty()
-    return "overlay_global"
-
-def ocultar_overlay_cargando(overlay_id):
-    """Oculta el overlay global"""
-    st.markdown("""
-        <script>
-            var overlays = document.querySelectorAll('[style*="position: fixed"]');
-            overlays.forEach(function(overlay) {
-                overlay.style.display = 'none';
-            });
-        </script>
-    """, unsafe_allow_html=True)
+    """Muestra un spinner simple de Streamlit"""
+    return st.spinner(mensaje)
 
 def render_cierre_reclamos(df_reclamos, df_clientes, sheet_reclamos, sheet_clientes, user):
     """
@@ -191,47 +141,44 @@ def _mostrar_reasignacion_tecnico(df_reclamos, sheet_reclamos):
     )
 
     if st.button("💾 Guardar nuevo técnico", key="guardar_tecnico"):
-        overlay_id = mostrar_overlay_cargando("Actualizando técnico...")
-        try:
-            fila_index = reclamo.name + 2
-            nuevo_tecnico = ", ".join(nuevo_tecnico_multiselect).upper()
+        with st.spinner("Actualizando técnico..."):
+            try:
+                fila_index = reclamo.name + 2
+                nuevo_tecnico = ", ".join(nuevo_tecnico_multiselect).upper()
 
-            col_tecnico = _col_letter("Técnico")
-            col_estado  = _col_letter("Estado")
+                col_tecnico = _col_letter("Técnico")
+                col_estado  = _col_letter("Estado")
 
-            updates = [{"range": f"{col_tecnico}{fila_index}", "values": [[nuevo_tecnico]]}]
-            if reclamo['Estado'] == "Pendiente":
-                updates.append({"range": f"{col_estado}{fila_index}", "values": [["En curso"]]})
+                updates = [{"range": f"{col_tecnico}{fila_index}", "values": [[nuevo_tecnico]]}]
+                if reclamo['Estado'] == "Pendiente":
+                    updates.append({"range": f"{col_estado}{fila_index}", "values": [["En curso"]]})
 
-            success, error = api_manager.safe_sheet_operation(
-                batch_update_sheet,
-                sheet_reclamos,
-                updates,
-                is_batch=True
-            )
-            
-            ocultar_overlay_cargando(overlay_id)
-            
-            if success:
-                st.success("✅ Técnico actualizado correctamente.")
-                if 'notification_manager' in st.session_state and nuevo_tecnico:
-                    mensaje = f"📌 El cliente N° {reclamo['Nº Cliente']} fue asignado al técnico {nuevo_tecnico}."
-                    st.session_state.notification_manager.add(
-                        notification_type="reclamo_asignado",
-                        message=mensaje,
-                        user_target="all",
-                        claim_id=reclamo["ID Reclamo"]
-                    )
-                return True
-            else:
-                st.error(f"❌ Error al actualizar: {error}")
+                success, error = api_manager.safe_sheet_operation(
+                    batch_update_sheet,
+                    sheet_reclamos,
+                    updates,
+                    is_batch=True
+                )
+                
+                if success:
+                    st.success("✅ Técnico actualizado correctamente.")
+                    if 'notification_manager' in st.session_state and nuevo_tecnico:
+                        mensaje = f"📌 El cliente N° {reclamo['Nº Cliente']} fue asignado al técnico {nuevo_tecnico}."
+                        st.session_state.notification_manager.add(
+                            notification_type="reclamo_asignado",
+                            message=mensaje,
+                            user_target="all",
+                            claim_id=reclamo["ID Reclamo"]
+                        )
+                    return True
+                else:
+                    st.error(f"❌ Error al actualizar: {error}")
+                    if DEBUG_MODE:
+                        st.write("Detalles del error:", error)
+            except Exception as e:
+                st.error(f"❌ Error inesperado: {str(e)}")
                 if DEBUG_MODE:
-                    st.write("Detalles del error:", error)
-        except Exception as e:
-            ocultar_overlay_cargando(overlay_id)
-            st.error(f"❌ Error inesperado: {str(e)}")
-            if DEBUG_MODE:
-                st.exception(e)
+                    st.exception(e)
 
     return False
 
@@ -324,56 +271,53 @@ def _mostrar_reclamos_en_curso(df_reclamos, df_clientes, sheet_reclamos, sheet_c
 
 def _cerrar_reclamo(row, nuevo_precinto, precinto_actual, cliente_info, sheet_reclamos, sheet_clientes):
     """Maneja el cierre de un reclamo, devuelve True si hubo cambios"""
-    overlay_id = mostrar_overlay_cargando("Cerrando reclamo...")
     try:
-        time.sleep(1)  # efecto visual breve
+        with st.spinner("Cerrando reclamo..."):
+            time.sleep(1)  # efecto visual breve
 
-        fila_index = row.name + 2
+            fila_index = row.name + 2
 
-        col_estado           = _col_letter("Estado")
-        col_fecha_formateada = _col_letter("Fecha_formateada")
-        col_precinto         = _col_letter("N° de Precinto")
+            col_estado           = _col_letter("Estado")
+            col_fecha_formateada = _col_letter("Fecha_formateada")
+            col_precinto         = _col_letter("N° de Precinto")
 
-        # Fecha y hora exacta de cierre (Argentina)
-        fecha_resolucion = ahora_argentina().strftime('%d/%m/%Y %H:%M')
+            # Fecha y hora exacta de cierre (Argentina)
+            fecha_resolucion = ahora_argentina().strftime('%d/%m/%Y %H:%M')
 
-        updates = [
-            {"range": f"{col_estado}{fila_index}", "values": [["Resuelto"]]},
-            {"range": f"{col_fecha_formateada}{fila_index}", "values": [[fecha_resolucion]]},
-        ]
+            updates = [
+                {"range": f"{col_estado}{fila_index}", "values": [["Resuelto"]]},
+                {"range": f"{col_fecha_formateada}{fila_index}", "values": [[fecha_resolucion]]},
+            ]
 
-        if nuevo_precinto.strip() and nuevo_precinto != precinto_actual:
-            updates.append({"range": f"{col_precinto}{fila_index}", "values": [[nuevo_precinto.strip()]]})
+            if nuevo_precinto.strip() and nuevo_precinto != precinto_actual:
+                updates.append({"range": f"{col_precinto}{fila_index}", "values": [[nuevo_precinto.strip()]]})
 
-        success, error = api_manager.safe_sheet_operation(
-            batch_update_sheet,
-            sheet_reclamos,
-            updates,
-            is_batch=True
-        )
+            success, error = api_manager.safe_sheet_operation(
+                batch_update_sheet,
+                sheet_reclamos,
+                updates,
+                is_batch=True
+            )
+            
+            if success:
+                if nuevo_precinto.strip() and nuevo_precinto != precinto_actual and not cliente_info.empty:
+                    index_cliente_en_clientes = cliente_info.index[0] + 2
+                    # Actualiza precinto también en clientes (columna F si allí no cambiaron)
+                    success_precinto, error_precinto = api_manager.safe_sheet_operation(
+                        sheet_clientes.update,
+                        f"F{index_cliente_en_clientes}",
+                        [[nuevo_precinto.strip()]]
+                    )
+                    if not success_precinto:
+                        st.warning(f"⚠️ Precinto guardado en reclamo pero no en hoja de clientes: {error_precinto}")
 
-        ocultar_overlay_cargando(overlay_id)
-        
-        if success:
-            if nuevo_precinto.strip() and nuevo_precinto != precinto_actual and not cliente_info.empty:
-                index_cliente_en_clientes = cliente_info.index[0] + 2
-                # Actualiza precinto también en clientes (columna F si allí no cambiaron)
-                success_precinto, error_precinto = api_manager.safe_sheet_operation(
-                    sheet_clientes.update,
-                    f"F{index_cliente_en_clientes}",
-                    [[nuevo_precinto.strip()]]
-                )
-                if not success_precinto:
-                    st.warning(f"⚠️ Precinto guardado en reclamo pero no en hoja de clientes: {error_precinto}")
-
-            st.success(f"🟢 Reclamo de {row['Nombre']} cerrado correctamente.")
-            return True
-        else:
-            st.error(f"❌ Error al actualizar: {error}")
-            if DEBUG_MODE:
-                st.write("Detalles del error:", error)
+                st.success(f"🟢 Reclamo de {row['Nombre']} cerrado correctamente.")
+                return True
+            else:
+                st.error(f"❌ Error al actualizar: {error}")
+                if DEBUG_MODE:
+                    st.write("Detalles del error:", error)
     except Exception as e:
-        ocultar_overlay_cargando(overlay_id)
         st.error(f"❌ Error inesperado: {str(e)}")
         if DEBUG_MODE:
             st.exception(e)
@@ -382,40 +326,37 @@ def _cerrar_reclamo(row, nuevo_precinto, precinto_actual, cliente_info, sheet_re
 
 def _volver_a_pendiente(row, sheet_reclamos):
     """Devuelve un reclamo a estado pendiente, devuelve True si hubo cambios"""
-    overlay_id = mostrar_overlay_cargando("Cambiando estado...")
     try:
-        time.sleep(1)  # efecto visual breve
+        with st.spinner("Cambiando estado..."):
+            time.sleep(1)  # efecto visual breve
 
-        fila_index = row.name + 2
+            fila_index = row.name + 2
 
-        col_estado           = _col_letter("Estado")
-        col_tecnico          = _col_letter("Técnico")
-        col_fecha_formateada = _col_letter("Fecha_formateada")
+            col_estado           = _col_letter("Estado")
+            col_tecnico          = _col_letter("Técnico")
+            col_fecha_formateada = _col_letter("Fecha_formateada")
 
-        updates = [
-            {"range": f"{col_estado}{fila_index}", "values": [["Pendiente"]]},
-            {"range": f"{col_tecnico}{fila_index}", "values": [[""]]},
-            {"range": f"{col_fecha_formateada}{fila_index}", "values": [[""]]},
-        ]
+            updates = [
+                {"range": f"{col_estado}{fila_index}", "values": [["Pendiente"]]},
+                {"range": f"{col_tecnico}{fila_index}", "values": [[""]]},
+                {"range": f"{col_fecha_formateada}{fila_index}", "values": [[""]]},
+            ]
 
-        success, error = api_manager.safe_sheet_operation(
-            batch_update_sheet,
-            sheet_reclamos,
-            updates,
-            is_batch=True
-        )
-        
-        ocultar_overlay_cargando(overlay_id)
-        
-        if success:
-            st.success(f"🔄 Reclamo de {row['Nombre']} vuelto a PENDIENTE.")
-            return True
-        else:
-            st.error(f"❌ Error al actualizar: {error}")
-            if DEBUG_MODE:
-                st.write("Detalles del error:", error)
+            success, error = api_manager.safe_sheet_operation(
+                batch_update_sheet,
+                sheet_reclamos,
+                updates,
+                is_batch=True
+            )
+            
+            if success:
+                st.success(f"🔄 Reclamo de {row['Nombre']} vuelto a PENDIENTE.")
+                return True
+            else:
+                st.error(f"❌ Error al actualizar: {error}")
+                if DEBUG_MODE:
+                    st.write("Detalles del error:", error)
     except Exception as e:
-        ocultar_overlay_cargando(overlay_id)
         st.error(f"❌ Error inesperado: {str(e)}")
         if DEBUG_MODE:
             st.exception(e)
@@ -446,16 +387,14 @@ def _mostrar_limpieza_reclamos(df_reclamos, sheet_reclamos):
             st.dataframe(df_antiguos[["Fecha y hora", "Nº Cliente", "Nombre", "Sector", "Tipo de reclamo", "Dias_resuelto"]])
         
         if st.button("🗑️ Eliminar reclamos antiguos", key="eliminar_antiguos"):
-            overlay_id = mostrar_overlay_cargando("Eliminando reclamos antiguos...")
-            try:
-                resultado = _eliminar_reclamos_antiguos(df_antiguos, sheet_reclamos)
-                ocultar_overlay_cargando(overlay_id)
-                return resultado
-            except Exception as e:
-                ocultar_overlay_cargando(overlay_id)
-                st.error(f"❌ Error al eliminar reclamos: {str(e)}")
-                if DEBUG_MODE:
-                    st.exception(e)
+            with st.spinner("Eliminando reclamos antiguos..."):
+                try:
+                    resultado = _eliminar_reclamos_antiguos(df_antiguos, sheet_reclamos)
+                    return resultado
+                except Exception as e:
+                    st.error(f"❌ Error al eliminar reclamos: {str(e)}")
+                    if DEBUG_MODE:
+                        st.exception(e)
     
     return False
 
