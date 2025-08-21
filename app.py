@@ -466,10 +466,14 @@ def cargar_datos():
             df_reclamos['Fecha y hora'] = df_reclamos['Fecha y hora'].apply(
                 lambda x: parse_fecha(x) if not pd.isna(x) else pd.NaT
             )
-            df_reclamos['Fecha_formateada'] = df_reclamos['Fecha y hora'].apply(
-                lambda x: format_fecha(x, '%d/%m/%Y %H:%M', 'Fecha inválida')
+
+        # Si la hoja trae 'Fecha_formateada' como texto y querés asegurarte que sea datetime:
+        if 'Fecha_formateada' in df_reclamos.columns:
+            df_reclamos['Fecha_formateada'] = pd.to_datetime(
+                df_reclamos['Fecha_formateada'].astype(str).str.replace(r"\s+", " ", regex=True).str.strip().replace({"": None, "nan": None}),
+                errors='coerce', dayfirst=True, infer_datetime_format=True
             )
-            
+           
         return df_reclamos, df_clientes, df_usuarios
         
     except Exception as e:
