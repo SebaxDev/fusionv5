@@ -40,6 +40,15 @@ def render_cierre_reclamos(df_reclamos, df_clientes, sheet_reclamos, sheet_clien
         'data_updated': False
     }
     
+    # 🚩 Si venimos de un cambio (resuelto/pendiente), forzar refresh de datos
+    if st.session_state.get('force_refresh'):
+        st.session_state['force_refresh'] = False
+        return {
+            'needs_refresh': True,
+            'message': 'Datos actualizados',
+            'data_updated': True
+        }
+
     st.subheader("✅ Cierre de reclamos en curso")
 
     try:
@@ -238,13 +247,13 @@ def _mostrar_reclamos_en_curso(df_reclamos, df_clientes, sheet_reclamos, sheet_c
             with col2:
                 if st.button("✅ Resuelto", key=f"resolver_{row['ID Reclamo']}", use_container_width=True):
                     if _cerrar_reclamo(row, nuevo_precinto, precinto_actual, cliente_info, sheet_reclamos, sheet_clientes):
-                        cambios = True
+                        st.session_state['force_refresh'] = True
                         st.rerun()
 
             with col3:
                 if st.button("↩️ Pendiente", key=f"volver_{row['ID Reclamo']}", use_container_width=True):
                     if _volver_a_pendiente(row, sheet_reclamos):
-                        cambios = True
+                        st.session_state['force_refresh'] = True
                         st.rerun()
 
             st.divider()
