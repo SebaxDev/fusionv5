@@ -439,7 +439,7 @@ app_state = AppState()
 
 @st.cache_data(ttl=30, show_spinner=False)
 def cargar_datos():
-    """Carga datos de Google Sheets con manejo robusto de nombres y fechas."""
+    """Carga datos de Google Sheets con manejo robusto de nombres y fechas + debug."""
     try:
         loading_placeholder = st.empty()
         loading_placeholder.markdown(get_loading_spinner(), unsafe_allow_html=True)
@@ -460,19 +460,19 @@ def cargar_datos():
         df_clientes.columns = [str(c).strip() for c in df_clientes.columns]
         df_usuarios.columns = [str(c).strip() for c in df_usuarios.columns]
 
-        # --- Detectar variantes y renombrar a los nombres esperados ---
+        # --- Detectar variantes y renombrar ---
         import re
         def _canon(colname):
             return re.sub(r'[^a-z0-9]', '', str(colname).lower())
 
-        # Mapeos posibles a "Fecha_formateada"
+        # Mapeo a "Fecha_formateada"
         for col in list(df_reclamos.columns):
             if _canon(col) in ("fechaformateada","fechadecierre","fechacierre","fecha_cierre","fechacierrehora"):
                 if col != "Fecha_formateada":
                     df_reclamos.rename(columns={col: "Fecha_formateada"}, inplace=True)
                 break
 
-        # Mapeos posibles a "Fecha y hora" (ingreso)
+        # Mapeo a "Fecha y hora"
         for col in list(df_reclamos.columns):
             if _canon(col) in ("fechayhora","fechahora","fechaingreso","fechaingresohora","fecha_hora"):
                 if col != "Fecha y hora":
@@ -486,17 +486,41 @@ def cargar_datos():
             if col in df_reclamos.columns:
                 df_reclamos[col] = df_reclamos[col].astype(str).str.strip()
 
+        # --- DEBUG inicial: cómo vienen las fechas crudas ---
+        if "Fecha_formateada" in df_reclamos.columns:
+            st.write("DEBUG (CRUDO) -> Ejemplos Fecha_formateada:", df_reclamos["Fecha_formateada"].head(20).tolist())
+        if "Fecha y hora" in df_reclamos.columns:
+            st.write("DEBUG (CRUDO) -> Ejemplos Fecha y hora:", df_reclamos["Fecha y hora"].head(20).tolist())
+
         # Parseo seguro: Fecha y hora (ingreso)
         if "Fecha y hora" in df_reclamos.columns:
             df_reclamos["Fecha y hora"] = df_reclamos["Fecha y hora"].apply(
                 lambda x: parse_fecha(x) if not pd.isna(x) else pd.NaT
             )
 
-        # Parseo seguro: Fecha_formateada (cierre)
+        # Parseo robusto: Fecha_formateada (cierre)
+        import numpy as np
         if "Fecha_formateada" in df_reclamos.columns:
-            df_reclamos["Fecha_formateada"] = df_reclamos["Fecha_formateada"].apply(
-                lambda x: parse_fecha(x) if not pd.isna(x) else pd.NaT
+            raw = df_reclamos["Fecha_formateada"].copy()
+            # Limpieza inicial
+            df_reclamos["Fecha_formateada"] = (
+                raw.astype(str)
+                .str.replace(r"\s+", " ", regex=True)
+                .str.strip()
+                .replace({"": np.nan, "nan": np.nan, "NaN": np.nan})
             )
+            # Intentar parseo con pandas
+            df_reclamos["Fecha_formateada"] = pd.to_datetime(
+                df_reclamos["Fecha_formateada"],
+                errors="coerce",
+                dayfirst=True,
+                infer_datetime_format=True
+            )
+            # --- DEBUG después del parseo ---
+            st.write("DEBUG (POST-PARSE) -> Muestra Fecha_formateada:",
+                     df_reclamos["Fecha_formateada"].head(20).astype(str).tolist())
+            st.write("DEBUG (POST-PARSE) -> Tipos detectados:",
+                     df_reclamos["Fecha_formateada"].dropna().map(type).value_counts().to_dict())
         else:
             df_reclamos["Fecha_formateada"] = pd.NaT
 
