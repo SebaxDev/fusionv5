@@ -124,19 +124,28 @@ def generar_reporte_diario_imagen(df_reclamos: pd.DataFrame) -> io.BytesIO:
 def debug_fechas_cierre(df_reclamos: pd.DataFrame):
     st.subheader("🔍 Debug - Fechas de Cierre (24h)")
     df, ahora_ts, hace_24h = _prep_df(df_reclamos)
+
     st.write(f"Ahora: **{ahora_ts}** — Ventana desde: **{hace_24h}**")
+
     cols = []
     if "ID Reclamo" in df.columns:
         cols.append("ID Reclamo")
     cols += ["Estado", "Técnico", "Fecha y hora", "Fecha_formateada"]
+
     df_dbg = df.loc[:, cols].copy()
     df_dbg["entra_24h_resuelto"] = (
         (df_dbg["Estado"] == "resuelto")
         & df_dbg["Fecha_formateada"].notna()
         & (df_dbg["Fecha_formateada"] >= hace_24h)
     )
+
+    # 👉 Nueva línea para chequear los tipos
+    st.write("Valores distintos en Fecha_formateada (tipos):")
+    st.write(df['Fecha_formateada'].dropna().map(type).value_counts())
+
     st.write("**Muestra (50):**")
     st.dataframe(df_dbg.head(50), use_container_width=True)
+
     st.write("**Resueltos en 24h por técnico:**")
     tmp = df[df["Estado"] == "resuelto"]
     tmp = tmp[tmp["Fecha_formateada"].notna() & (tmp["Fecha_formateada"] >= hace_24h)]
@@ -144,6 +153,8 @@ def debug_fechas_cierre(df_reclamos: pd.DataFrame):
         st.info("No hay resueltos en las últimas 24 horas.")
     else:
         st.dataframe(
-            tmp.groupby("Técnico")["Estado"].count().reset_index().rename(columns={"Estado": "Cantidad"}),
+            tmp.groupby("Técnico")["Estado"].count()
+            .reset_index()
+            .rename(columns={"Estado": "Cantidad"}),
             use_container_width=True,
         )
