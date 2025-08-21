@@ -492,19 +492,12 @@ def cargar_datos():
                 lambda x: parse_fecha(x) if not pd.isna(x) else pd.NaT
             )
 
-        # Parseo seguro: Fecha_formateada (cierre) - no la sobreescribimos usando 'Fecha y hora'
+        # Parseo seguro: Fecha_formateada (cierre)
         if "Fecha_formateada" in df_reclamos.columns:
-            df_reclamos["Fecha_formateada"] = pd.to_datetime(
-                df_reclamos["Fecha_formateada"].astype(str)
-                    .str.replace(r"\s+", " ", regex=True)
-                    .str.strip()
-                    .replace({"": None, "nan": None}),
-                errors="coerce",
-                dayfirst=True,
-                infer_datetime_format=True
+            df_reclamos["Fecha_formateada"] = df_reclamos["Fecha_formateada"].apply(
+                lambda x: parse_fecha(x) if not pd.isna(x) else pd.NaT
             )
         else:
-            # Si no existe, crearla vacía (para evitar KeyError luego)
             df_reclamos["Fecha_formateada"] = pd.NaT
 
         return df_reclamos, df_clientes, df_usuarios
