@@ -1,23 +1,22 @@
 import io
-from datetime import datetime
-import pandas as pd
 from PIL import Image, ImageDraw, ImageFont
-import streamlit as st
-from utils.date_utils import ahora_argentina, format_fecha
+import pandas as pd
+from utils.date_utils import ahora_argentina
 
 def generar_reporte_diario_imagen(df_reclamos):
     """Genera una imagen PNG con el reporte diario."""
-    # Dimensiones de la imagen
+
+    # Dimensiones y colores
     WIDTH, HEIGHT = 1200, 1600
     BG_COLOR = (39, 40, 34)  # Monokai fondo
-    TEXT_COLOR = (248, 248, 242)  # Monokai texto blanco
-    HIGHLIGHT_COLOR = (249, 38, 114)  # Monokai rosa
+    TEXT_COLOR = (248, 248, 242)  # Blanco
+    HIGHLIGHT_COLOR = (249, 38, 114)  # Rosa
 
-    # Crear imagen base
+    # Crear imagen
     img = Image.new("RGB", (WIDTH, HEIGHT), BG_COLOR)
     draw = ImageDraw.Draw(img)
 
-    # Cargar fuente (usa una genérica de sistema si no hay personalizada)
+    # Fuentes
     try:
         font_title = ImageFont.truetype("DejaVuSans-Bold.ttf", 36)
         font_subtitle = ImageFont.truetype("DejaVuSans-Bold.ttf", 28)
@@ -27,101 +26,103 @@ def generar_reporte_diario_imagen(df_reclamos):
         font_subtitle = ImageFont.load_default()
         font_text = ImageFont.load_default()
 
-    # Variables para escribir texto
+    # Variables de escritura
     y = 50
     line_height = 40
 
-    # Fecha
+    # Fecha de generación
     fecha_hoy = ahora_argentina().strftime("%d/%m/%Y")
     hora_gen = ahora_argentina().strftime("%H:%M")
 
-    # Asegurar que la columna Fecha_formateada (columna M) sea datetime
-    if "Fecha_formateada" in df_reclamos.columns:
-        df_reclamos["Fecha_formateada"] = pd.to_datetime(
-            df_reclamos["Fecha_formateada"], 
-            errors="coerce", 
-            dayfirst=True
-        )
-    else:
-        # Si no existe la columna, crear una vacía
+    # ----------------------------
+    # Normalización de columnas
+    # ----------------------------
+    # Fecha_formateada → fecha de cierre
+    if "Fecha_formateada" not in df_reclamos.columns:
         df_reclamos["Fecha_formateada"] = pd.NaT
+    else:
+        df_reclamos["Fecha_formateada"] = (
+            df_reclamos["Fecha_formateada"]
+            .astype(str).str.strip().replace("nan", None)
+        )
+        df_reclamos["Fecha_formateada"] = pd.to_datetime(
+            df_reclamos["Fecha_formateada"],
+            errors="coerce",
+            dayfirst=True,
+            infer_datetime_format=True
+        )
 
-    # 🎯 CAMBIO IMPORTANTE: Considerar últimas 24 horas en lugar de solo "hoy"
-    ahora = ahora_argentina()
+    # Fecha y hora → fecha de ingreso
+    if "Fecha y hora" in df_reclamos.columns:
+        df_reclamos["Fecha y hora"] = pd.to_datetime(
+            df_reclamos["Fecha y hora"],
+            errors="coerce",
+            dayfirst=True,
+            infer_datetime_format=True
+        )
+
+    # Estado normalizado
+    df_reclamos["Estado"] = df_reclamos["Estado"].astype(str).str.strip().str.lower()
+
+    # ----------------------------
+    # Filtros de últimas 24 horas
+    # ----------------------------
+    ahora = ahora_argentina().replace(tzinfo=None)
     hace_24_horas = ahora - pd.Timedelta(hours=24)
-    
-    # 🎯 CORRECCIÓN: Asegurar que ambas fechas estén en la misma timezone
-    # Convertir hace_24_horas a naive datetime (sin timezone) para comparar
-    hace_24_horas_naive = hace_24_horas.replace(tzinfo=None)
-    
-    # Normalizar fechas
-    df_reclamos["Fecha y hora"] = pd.to_datetime(
-        df_reclamos["Fecha y hora"], 
-        errors="coerce", 
-        dayfirst=True
-    )
-    if pd.api.types.is_datetime64tz_dtype(df_reclamos["Fecha y hora"]):
-        df_reclamos["Fecha y hora"] = df_reclamos["Fecha y hora"].dt.tz_localize(None)
 
-    # Reclamos ingresados en las últimas 24 horas
     reclamos_24h = df_reclamos[
-        (df_reclamos['Fecha y hora'].notna()) &
-        (df_reclamos['Fecha y hora'] >= hace_24_horas_naive)
+        (df_reclamos["Fecha y hora"].notna()) &
+        (df_reclamos["Fecha y hora"] >= hace_24_horas)
     ]
-
     total_24h = len(reclamos_24h)
-    
-    # Reclamos resueltos en las últimas 24 horas
-    # 🎯 CORRECCIÓN: Usar .dt.tz_localize(None) para quitar timezone si existe
+
     resueltos_24h = df_reclamos[
-        (df_reclamos['Estado'] == 'Resuelto') &
-        (df_reclamos['Fecha_formateada'].notna()) &
-        (df_reclamos['Fecha_formateada'].dt.tz_localize(None) >= hace_24_horas_naive)
+        (df_reclamos["Estado"] == "resuelto") &
+        (df_reclamos["Fecha_formateada"].notna()) &
+        (df_reclamos["Fecha_formateada"] >= hace_24_horas)
     ]
 
-    # Agrupar por técnico
+    # Agrupación por técnico
     tecnicos_resueltos = (
-        resueltos_24h.groupby('Técnico')['Estado']
+        resueltos_24h.groupby("Técnico")["Estado"]
         .count()
         .reset_index()
-        .sort_values(by='Estado', ascending=False)
+        .sort_values(by="Estado", ascending=False)
     )
 
-    # Pendientes agrupados por tipo
-    pendientes = df_reclamos[df_reclamos['Estado'] == 'Pendiente']
+    # Pendientes
+    pendientes = df_reclamos[df_reclamos["Estado"] == "pendiente"]
     pendientes_tipo = (
-        pendientes.groupby('Tipo de reclamo')['Estado']
+        pendientes.groupby("Tipo de reclamo")["Estado"]
         .count()
         .reset_index()
-        .sort_values(by='Estado', ascending=False)
+        .sort_values(by="Estado", ascending=False)
     )
-    total_pendientes = pendientes['Estado'].count()
+    total_pendientes = pendientes["Estado"].count()
 
-    # --------------------------
-    # Escribir contenido
-    # --------------------------
+    # ----------------------------
+    # Función auxiliar de escritura
+    # ----------------------------
     def draw_line(text, font, color, offset_y):
         nonlocal y
         draw.text((50, y), text, font=font, fill=color)
         y += offset_y
 
+    # ----------------------------
+    # Contenido del reporte
+    # ----------------------------
     draw_line(f"■ Reporte Diario - {fecha_hoy}", font_title, HIGHLIGHT_COLOR, line_height)
     draw_line(f"Generado a las {hora_gen}", font_subtitle, TEXT_COLOR, line_height)
-
     draw_line("", font_text, TEXT_COLOR, line_height // 2)
 
-    # 🎯 CAMBIO: De "hoy" a "24h"
     draw_line(f"■ Reclamos ingresados (24h): {total_24h}", font_subtitle, HIGHLIGHT_COLOR, line_height)
-
     draw_line("", font_text, TEXT_COLOR, line_height // 2)
 
-    # 🎯 CAMBIO: De "hoy" a "24h"
     draw_line("■ Reporte técnico/grupo (24h):", font_subtitle, HIGHLIGHT_COLOR, line_height)
     if tecnicos_resueltos.empty:
         draw_line("No hay reclamos resueltos en las últimas 24h", font_text, TEXT_COLOR, line_height)
     else:
         for _, row in tecnicos_resueltos.iterrows():
-            # 🎯 CAMBIO: Texto más claro
             draw_line(f"{row['Técnico']}: {row['Estado']} resueltos (24h)", font_text, TEXT_COLOR, line_height)
 
     draw_line("", font_text, TEXT_COLOR, line_height // 2)
@@ -130,7 +131,7 @@ def generar_reporte_diario_imagen(df_reclamos):
     for _, row in pendientes_tipo.iterrows():
         draw_line(f"{row['Tipo de reclamo']}: {row['Estado']}", font_text, TEXT_COLOR, line_height)
 
-    # Guardar a buffer
+    # Guardar imagen a buffer
     buffer = io.BytesIO()
     img.save(buffer, format="PNG")
     buffer.seek(0)
