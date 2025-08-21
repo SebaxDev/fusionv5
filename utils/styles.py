@@ -93,8 +93,11 @@ def get_main_styles(dark_mode=True):
     
     /* Mejoras para contenedores principales */
     .main .block-container {{
+        max-width: 1400px;
         padding-top: 2rem;
         padding-bottom: 2rem;
+        padding-left: 2rem;
+        padding-right: 2rem;
     }}
     
     /* HEADERS MODERNOS */
