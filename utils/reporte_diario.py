@@ -51,6 +51,26 @@ def generar_reporte_diario_imagen(df_reclamos):
     reclamos_hoy = df_reclamos[df_reclamos['Fecha y hora'].dt.date == hoy]
     total_hoy = len(reclamos_hoy)
 
+    # MEJORAR: Incluir también reclamos resueltos sin fecha pero con estado "Resuelto"
+    resueltos_hoy = df_reclamos[
+        (df_reclamos['Estado'] == 'Resuelto') &
+        (
+            # Caso 1: Tiene fecha de hoy
+            ((df_reclamos['Fecha_formateada'].notna()) &
+             (df_reclamos['Fecha_formateada'].dt.date == hoy)) |
+            # Caso 2: No tiene fecha pero está resuelto (asumimos hoy)
+            (df_reclamos['Fecha_formateada'].isna())
+        )
+    ]
+
+    # Agrupar por técnico - manejar casos donde Técnico podría estar vacío
+    tecnicos_resueltos = (
+        resueltos_hoy.groupby('Técnico')['Estado']
+        .count()
+        .reset_index()
+        .sort_values(by='Estado', ascending=False)
+    )
+
     # Reclamos resueltos por técnico/grupo basados en la fecha de cierre HOY
     # Obtener el inicio y fin del día en Argentina timezone
     inicio_dia = ahora_argentina().replace(hour=0, minute=0, second=0, microsecond=0)
@@ -124,42 +144,112 @@ def debug_fechas_cierre(df_reclamos):
         st.warning("No existe la columna 'Fecha_formateada'")
         return
     
+    # Hacer una copia para no modificar el original
+    df_debug = df_reclamos.copy()
+    
     # Convertir a datetime para el análisis
-    df_reclamos["Fecha_formateada_dt"] = pd.to_datetime(
-        df_reclamos["Fecha_formateada"], 
+    df_debug["Fecha_formateada_dt"] = pd.to_datetime(
+        df_debug["Fecha_formateada"], 
         errors="coerce", 
         dayfirst=True
     )
     
-    st.write("**Muestra de fechas de cierre:**")
-    st.dataframe(df_reclamos[['ID Reclamo', 'Estado', 'Técnico', 'Fecha_formateada', 'Fecha_formateada_dt']].head(10))
+    st.write("**📊 ESTADÍSTICAS COMPLETAS:**")
+    col1, col2, col3 = st.columns(3)
     
-    st.write("**Estadísticas:**")
-    st.write(f"Total reclamos: {len(df_reclamos)}")
-    st.write(f"Reclamos con Fecha_formateada no nula: {df_reclamos['Fecha_formateada_dt'].notna().sum()}")
-    st.write(f"Reclamos Resueltos: {(df_reclamos['Estado'] == 'Resuelto').sum()}")
+    with col1:
+        st.metric("Total reclamos", len(df_debug))
+        st.metric("Reclamos Resueltos", (df_debug['Estado'] == 'Resuelto').sum())
     
-    # Reclamos resueltos hoy
+    with col2:
+        st.metric("Con Fecha_formateada", df_debug['Fecha_formateada_dt'].notna().sum())
+        st.metric("Resueltos con fecha", ((df_debug['Estado'] == 'Resuelto') & 
+                                        df_debug['Fecha_formateada_dt'].notna()).sum())
+    
+    with col3:
+        hoy = ahora_argentina().date()
+        resueltos_hoy = df_debug[
+            (df_debug['Estado'] == 'Resuelto') &
+            (df_debug['Fecha_formateada_dt'].notna()) &
+            (df_debug['Fecha_formateada_dt'].dt.date == hoy)
+        ]
+        st.metric("Resueltos HOY", len(resueltos_hoy))
+    
+    st.divider()
+    
+    # 1. MOSTRAR TODOS LOS TÉCNICOS CON RECLAMOS RESUELTOS (cualquier fecha)
+    st.write("**👷 TODOS los técnicos con reclamos resueltos (histórico):**")
+    todos_tecnicos_resueltos = df_debug[df_debug['Estado'] == 'Resuelto']['Técnico'].value_counts()
+    if not todos_tecnicos_resueltos.empty:
+        for tecnico, count in todos_tecnicos_resueltos.items():
+            st.write(f"- {tecnico}: {count} resueltos (total histórico)")
+    else:
+        st.write("No hay técnicos con reclamos resueltos")
+    
+    st.divider()
+    
+    # 2. MOSTRAR RECLAMOS RESUELTOS HOY CON DETALLE
     hoy = ahora_argentina().date()
-    resueltos_hoy = df_reclamos[
-        (df_reclamos['Estado'] == 'Resuelto') &
-        (df_reclamos['Fecha_formateada_dt'].notna()) &
-        (df_reclamos['Fecha_formateada_dt'].dt.date == hoy)
+    resueltos_hoy = df_debug[
+        (df_debug['Estado'] == 'Resuelto') &
+        (df_debug['Fecha_formateada_dt'].notna()) &
+        (df_debug['Fecha_formateada_dt'].dt.date == hoy)
     ]
     
-    st.write(f"Reclamos resueltos hoy: {len(resueltos_hoy)}")
+    st.write(f"**✅ RECLAMOS RESUELTOS HOY ({len(resueltos_hoy)}):**")
     if not resueltos_hoy.empty:
-        st.dataframe(resueltos_hoy[['ID Reclamo', 'Técnico', 'Fecha_formateada', 'Fecha_formateada_dt']])
-        
         # Mostrar por técnico
-        st.write("**Resueltos por técnico hoy:**")
+        st.write("**Por técnico:**")
         tecnicos_count = resueltos_hoy['Técnico'].value_counts()
         for tecnico, count in tecnicos_count.items():
             st.write(f"- {tecnico}: {count} resueltos")
+        
+        # Mostrar tabla detallada
+        st.write("**Detalle completo:**")
+        st.dataframe(resueltos_hoy[['ID Reclamo', 'Técnico', 'Fecha_formateada', 
+                                  'Fecha_formateada_dt', 'Tipo de reclamo', 'Sector']])
     else:
-        st.write("**Últimos 5 reclamos resueltos (de cualquier fecha):**")
-        ultimos_resueltos = df_reclamos[df_reclamos['Estado'] == 'Resuelto'].nlargest(5, 'Fecha_formateada_dt')
-        st.dataframe(ultimos_resueltos[['ID Reclamo', 'Técnico', 'Fecha_formateada', 'Fecha_formateada_dt']])
+        st.write("No hay reclamos resueltos hoy")
+        
+        # Mostrar los últimos resueltos de cualquier fecha para debugging
+        st.write("**Últimos 10 reclamos resueltos (cualquier fecha):**")
+        ultimos_resueltos = df_debug[df_debug['Estado'] == 'Resuelto'].nlargest(10, 'Fecha_formateada_dt')
+        st.dataframe(ultimos_resueltos[['ID Reclamo', 'Técnico', 'Fecha_formateada', 
+                                      'Fecha_formateada_dt', 'Tipo de reclamo']])
+    
+    st.divider()
+    
+    # 3. PROBLEMAS COMUNES - VERIFICAR
+    st.write("**🔍 PROBLEMAS COMUNES DETECTADOS:**")
+    
+    # Técnicos con reclamos resueltos pero sin fecha
+    tecnicos_sin_fecha = df_debug[
+        (df_debug['Estado'] == 'Resuelto') & 
+        (df_debug['Fecha_formateada_dt'].isna())
+    ]['Técnico'].unique()
+    
+    if len(tecnicos_sin_fecha) > 0:
+        st.warning(f"⚠️ Técnicos con reclamos resueltos pero SIN FECHA: {', '.join(tecnicos_sin_fecha)}")
+    
+    # Fechas que no se pudieron parsear
+    fechas_invalidas = df_debug[
+        (df_debug['Estado'] == 'Resuelto') & 
+        (df_debug['Fecha_formateada'].notna()) &
+        (df_debug['Fecha_formateada_dt'].isna())
+    ]
+    if len(fechas_invalidas) > 0:
+        st.warning(f"⚠️ {len(fechas_invalidas)} fechas no se pudieron parsear correctamente")
+        st.dataframe(fechas_invalidas[['ID Reclamo', 'Técnico', 'Fecha_formateada']].head(5))
+    
+    # Reclamos resueltos con fecha pero no de hoy
+    resueltos_otra_fecha = df_debug[
+        (df_debug['Estado'] == 'Resuelto') &
+        (df_debug['Fecha_formateada_dt'].notna()) &
+        (df_debug['Fecha_formateada_dt'].dt.date != hoy)
+    ]
+    if len(resueltos_otra_fecha) > 0:
+        st.info(f"ℹ️ {len(resueltos_otra_fecha)} reclamos resueltos en otras fechas (no hoy)")
+        st.dataframe(resueltos_otra_fecha[['ID Reclamo', 'Técnico', 'Fecha_formateada_dt']].head(5))
 
 
 def render_reporte_diario(df_reclamos):
