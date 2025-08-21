@@ -91,13 +91,62 @@ def get_main_styles(dark_mode=True):
         line-height: 1.6;
     }}
     
-    /* Mejoras para contenedores principales */
+    /* MEJORAS PARA CONTENEDORES PRINCIPALES - ANCHO EXPANDIDO */
     .main .block-container {{
-        max-width: 1700px;
+        max-width: 1800px !important;
         padding-top: 2rem;
         padding-bottom: 2rem;
-        padding-left: 2rem;
-        padding-right: 2rem;
+        padding-left: 3rem;
+        padding-right: 3rem;
+    }}
+    
+    /* Cuando el sidebar está colapsado, expandimos el ancho */
+    [data-testid="stSidebarCollapsed"] ~ .main .block-container {{
+        max-width: 95% !important;
+        padding-left: 5%;
+        padding-right: 5%;
+    }}
+    
+    /* Ajustar el ancho de los elementos internos */
+    [data-testid="stSidebarCollapsed"] ~ .main .stButton > button {{
+        min-width: auto;
+    }}
+    
+    /* Mejorar la visualización de formularios en modo expandido */
+    [data-testid="stSidebarCollapsed"] ~ .main .stTextInput > div > div,
+    [data-testid="stSidebarCollapsed"] ~ .main .stSelectbox > div > div,
+    [data-testid="stSidebarCollapsed"] ~ .main .stTextArea > div > div {{
+        width: 100% !important;
+        max-width: none !important;
+    }}
+    
+    /* Mejoras específicas para formularios en modo de pantalla completa */
+    [data-testid="stSidebarCollapsed"] ~ .main .element-container {{
+        max-width: 100% !important;
+    }}
+
+    [data-testid="stSidebarCollapsed"] ~ .main .stTextInput > div > div > input {{
+        width: 100% !important;
+        max-width: none !important;
+    }}
+
+    [data-testid="stSidebarCollapsed"] ~ .main .stSelectbox > div > div > select {{
+        width: 100% !important;
+        max-width: none !important;
+    }}
+
+    [data-testid="stSidebarCollapsed"] ~ .main .stTextArea > div > div > textarea {{
+        width: 100% !important;
+        max-width: none !important;
+    }}
+
+    /* Ajustar columnas en grid */
+    [data-testid="stSidebarCollapsed"] ~ .main .stHorizontalBlock > div {{
+        gap: 1.5rem;
+    }}
+
+    [data-testid="stSidebarCollapsed"] ~ .main .stColumn {{
+        min-width: auto !important;
     }}
     
     /* HEADERS MODERNOS */
@@ -406,6 +455,11 @@ def get_main_styles(dark_mode=True):
     @media (max-width: 768px) {{
         .main .block-container {{
             padding: 1rem;
+        }}
+        
+        [data-testid="stSidebarCollapsed"] ~ .main .block-container {{
+            padding-left: 1rem;
+            padding-right: 1rem;
         }}
         
         .card {{
