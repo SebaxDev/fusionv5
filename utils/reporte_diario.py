@@ -1,141 +1,150 @@
-import io
-from PIL import Image, ImageDraw, ImageFont
-import pandas as pd
-from utils.date_utils import ahora_argentina
-
 def generar_reporte_diario_imagen(df_reclamos):
-    """Genera una imagen PNG con el reporte diario."""
+    """Genera una imagen PNG con el reporte diario (últimas 24 h)."""
+    import io
+    from PIL import Image, ImageDraw, ImageFont
+    import pandas as pd
+    from utils.date_utils import ahora_argentina
 
-    # Dimensiones y colores
+    # ==== Copia segura y normalización de columnas ====
+    df = df_reclamos.copy()
+    df.columns = [str(c).strip() for c in df.columns]
+
+    # Columnas clave (alias por si cambian mayúsculas/espacios)
+    COL_INGRESO = next((c for c in df.columns if c.lower() == "fecha y hora"), "Fecha y hora")
+    COL_CIERRE  = next((c for c in df.columns if c.lower() == "fecha_formateada"), "Fecha_formateada")
+    COL_ESTADO  = next((c for c in df.columns if c.lower() == "estado"), "Estado")
+    COL_TECNICO = next((c for c in df.columns if c.lower() == "técnico"), "Técnico")
+    COL_TIPO    = next((c for c in df.columns if c.lower() == "tipo de reclamo"), "Tipo de reclamo")
+
+    # Asegurar columnas presentes
+    for col in (COL_INGRESO, COL_CIERRE, COL_ESTADO, COL_TECNICO, COL_TIPO):
+        if col not in df.columns:
+            df[col] = pd.NA
+
+    # ==== Parseo de fechas (ingreso y cierre) ====
+    # Ingreso (puede venir con strings varios)
+    df[COL_INGRESO] = (
+        df[COL_INGRESO]
+        .astype(str).str.strip().replace({"", "nan", "NaN", "None": None})
+    )
+    df[COL_INGRESO] = pd.to_datetime(
+        df[COL_INGRESO], errors="coerce", dayfirst=True, infer_datetime_format=True
+    )
+    # Si quedó con tz, la quitamos de forma segura
+    if pd.api.types.is_datetime64tz_dtype(df[COL_INGRESO]):
+        df[COL_INGRESO] = df[COL_INGRESO].dt.tz_localize(None)
+
+    # Cierre (fecha de resolución)
+    df[COL_CIERRE] = (
+        df[COL_CIERRE]
+        .astype(str).str.replace(r"\s+", " ", regex=True)  # colapsar dobles espacios
+        .str.strip().replace({"", "nan", "NaN", "None": None})
+    )
+    df[COL_CIERRE] = pd.to_datetime(
+        df[COL_CIERRE], errors="coerce", dayfirst=True, infer_datetime_format=True
+    )
+    if pd.api.types.is_datetime64tz_dtype(df[COL_CIERRE]):
+        df[COL_CIERRE] = df[COL_CIERRE].dt.tz_localize(None)
+
+    # Estado normalizado
+    df[COL_ESTADO] = df[COL_ESTADO].astype(str).str.strip().str.lower()
+
+    # Técnico / Tipo saneados para agrupar
+    df[COL_TECNICO] = df[COL_TECNICO].fillna("Sin técnico").astype(str).str.strip()
+    df[COL_TIPO] = df[COL_TIPO].fillna("Sin tipo").astype(str).str.strip()
+
+    # ==== Ventana últimas 24 h ====
+    ahora_ts = pd.Timestamp(ahora_argentina()).tz_localize(None)
+    hace_24h = ahora_ts - pd.Timedelta(hours=24)
+
+    # Ingresados últimas 24 h (por fecha de ingreso)
+    mask_ing_24h = df[COL_INGRESO].notna() & (df[COL_INGRESO] >= hace_24h)
+    total_ingresados_24h = int(mask_ing_24h.sum())
+
+    # Resueltos últimas 24 h (por fecha de cierre)
+    mask_res_24h = (
+        (df[COL_ESTADO] == "resuelto")
+        & df[COL_CIERRE].notna()
+        & (df[COL_CIERRE] >= hace_24h)
+    )
+    resueltos_24h = df.loc[mask_res_24h, [COL_TECNICO, COL_ESTADO, COL_CIERRE]]
+
+    # Agrupar resueltos por técnico
+    tecnicos_resueltos = (
+        resueltos_24h.groupby(COL_TECNICO)[COL_ESTADO]
+        .count()
+        .reset_index()
+        .rename(columns={COL_ESTADO: "Cantidad"})
+        .sort_values("Cantidad", ascending=False)
+    )
+
+    # Pendientes por tipo (estado == Pendiente)
+    pendientes = df[df[COL_ESTADO] == "pendiente"]
+    pendientes_tipo = (
+        pendientes.groupby(COL_TIPO)[COL_ESTADO]
+        .count()
+        .reset_index()
+        .rename(columns={COL_ESTADO: "Cantidad", COL_TIPO: "Tipo"})
+        .sort_values("Cantidad", ascending=False)
+    )
+    total_pendientes = int(len(pendientes))
+
+    # ==== Render de imagen ====
     WIDTH, HEIGHT = 1200, 1600
-    BG_COLOR = (39, 40, 34)  # Monokai fondo
-    TEXT_COLOR = (248, 248, 242)  # Blanco
-    HIGHLIGHT_COLOR = (249, 38, 114)  # Rosa
+    BG_COLOR = (39, 40, 34)
+    TEXT_COLOR = (248, 248, 242)
+    HIGHLIGHT_COLOR = (249, 38, 114)
 
-    # Crear imagen
     img = Image.new("RGB", (WIDTH, HEIGHT), BG_COLOR)
     draw = ImageDraw.Draw(img)
 
-    # Fuentes
     try:
         font_title = ImageFont.truetype("DejaVuSans-Bold.ttf", 36)
-        font_subtitle = ImageFont.truetype("DejaVuSans-Bold.ttf", 28)
-        font_text = ImageFont.truetype("DejaVuSans.ttf", 24)
-    except:
+        font_sub = ImageFont.truetype("DejaVuSans-Bold.ttf", 28)
+        font_txt = ImageFont.truetype("DejaVuSans.ttf", 24)
+    except Exception:
         font_title = ImageFont.load_default()
-        font_subtitle = ImageFont.load_default()
-        font_text = ImageFont.load_default()
+        font_sub = ImageFont.load_default()
+        font_txt = ImageFont.load_default()
 
-    # Variables de escritura
     y = 50
-    line_height = 40
+    line_h = 40
 
-    # Fecha de generación
-    fecha_hoy = ahora_argentina().strftime("%d/%m/%Y")
-    hora_gen = ahora_argentina().strftime("%H:%M")
-
-    # ----------------------------
-    # Normalización de columnas
-    # ----------------------------
-    # Fecha_formateada → fecha de cierre
-    if "Fecha_formateada" not in df_reclamos.columns:
-        df_reclamos["Fecha_formateada"] = pd.NaT
-    else:
-        df_reclamos["Fecha_formateada"] = (
-            df_reclamos["Fecha_formateada"]
-            .astype(str).str.strip().replace("nan", None)
-        )
-        df_reclamos["Fecha_formateada"] = pd.to_datetime(
-            df_reclamos["Fecha_formateada"],
-            errors="coerce",
-            dayfirst=True,
-            infer_datetime_format=True
-        )
-
-    # Fecha y hora → fecha de ingreso
-    if "Fecha y hora" in df_reclamos.columns:
-        df_reclamos["Fecha y hora"] = pd.to_datetime(
-            df_reclamos["Fecha y hora"],
-            errors="coerce",
-            dayfirst=True,
-            infer_datetime_format=True
-        )
-
-    # Estado normalizado
-    df_reclamos["Estado"] = df_reclamos["Estado"].astype(str).str.strip().str.lower()
-
-    # ----------------------------
-    # Filtros de últimas 24 horas
-    # ----------------------------
-    ahora = ahora_argentina().replace(tzinfo=None)
-    hace_24_horas = ahora - pd.Timedelta(hours=24)
-
-    reclamos_24h = df_reclamos[
-        (df_reclamos["Fecha y hora"].notna()) &
-        (df_reclamos["Fecha y hora"] >= hace_24_horas)
-    ]
-    total_24h = len(reclamos_24h)
-
-    resueltos_24h = df_reclamos[
-        (df_reclamos["Estado"] == "resuelto") &
-        (df_reclamos["Fecha_formateada"].notna()) &
-        (df_reclamos["Fecha_formateada"] >= hace_24_horas)
-    ]
-
-    # Agrupación por técnico
-    tecnicos_resueltos = (
-        resueltos_24h.groupby("Técnico")["Estado"]
-        .count()
-        .reset_index()
-        .sort_values(by="Estado", ascending=False)
-    )
-
-    # Pendientes
-    pendientes = df_reclamos[df_reclamos["Estado"] == "pendiente"]
-    pendientes_tipo = (
-        pendientes.groupby("Tipo de reclamo")["Estado"]
-        .count()
-        .reset_index()
-        .sort_values(by="Estado", ascending=False)
-    )
-    total_pendientes = pendientes["Estado"].count()
-
-    # ----------------------------
-    # Función auxiliar de escritura
-    # ----------------------------
-    def draw_line(text, font, color, offset_y):
+    def line(text, font, color, dy):
         nonlocal y
-        draw.text((50, y), text, font=font, fill=color)
-        y += offset_y
+        draw.text((50, y), str(text), font=font, fill=color)
+        y += dy
 
-    # ----------------------------
-    # Contenido del reporte
-    # ----------------------------
-    draw_line(f"■ Reporte Diario - {fecha_hoy}", font_title, HIGHLIGHT_COLOR, line_height)
-    draw_line(f"Generado a las {hora_gen}", font_subtitle, TEXT_COLOR, line_height)
-    draw_line("", font_text, TEXT_COLOR, line_height // 2)
+    fecha_str = ahora_ts.strftime("%d/%m/%Y")
+    hora_str = ahora_ts.strftime("%H:%M")
 
-    draw_line(f"■ Reclamos ingresados (24h): {total_24h}", font_subtitle, HIGHLIGHT_COLOR, line_height)
-    draw_line("", font_text, TEXT_COLOR, line_height // 2)
+    line(f"■ Reporte Diario - {fecha_str}", font_title, HIGHLIGHT_COLOR, line_h)
+    line(f"Generado a las {hora_str}", font_sub, TEXT_COLOR, line_h)
+    line("", font_txt, TEXT_COLOR, line_h // 2)
 
-    draw_line("■ Reporte técnico/grupo (24h):", font_subtitle, HIGHLIGHT_COLOR, line_height)
+    line(f"■ Reclamos ingresados (24h): {total_ingresados_24h}", font_sub, HIGHLIGHT_COLOR, line_h)
+    line("", font_txt, TEXT_COLOR, line_h // 2)
+
+    line("■ Reporte técnico/grupo (24h):", font_sub, HIGHLIGHT_COLOR, line_h)
     if tecnicos_resueltos.empty:
-        draw_line("No hay reclamos resueltos en las últimas 24h", font_text, TEXT_COLOR, line_height)
+        line("No hay reclamos resueltos en las últimas 24h", font_txt, TEXT_COLOR, line_h)
     else:
-        for _, row in tecnicos_resueltos.iterrows():
-            draw_line(f"{row['Técnico']}: {row['Estado']} resueltos (24h)", font_text, TEXT_COLOR, line_height)
+        for _, r in tecnicos_resueltos.iterrows():
+            line(f"{r[COL_TECNICO]}: {int(r['Cantidad'])} resueltos (24h)", font_txt, TEXT_COLOR, line_h)
 
-    draw_line("", font_text, TEXT_COLOR, line_height // 2)
+    line("", font_txt, TEXT_COLOR, line_h // 2)
 
-    draw_line(f"■ Quedan pendientes: {total_pendientes}", font_subtitle, HIGHLIGHT_COLOR, line_height)
-    for _, row in pendientes_tipo.iterrows():
-        draw_line(f"{row['Tipo de reclamo']}: {row['Estado']}", font_text, TEXT_COLOR, line_height)
+    line(f"■ Quedan pendientes: {total_pendientes}", font_sub, HIGHLIGHT_COLOR, line_h)
+    if pendientes_tipo.empty:
+        line("Sin pendientes", font_txt, TEXT_COLOR, line_h)
+    else:
+        for _, r in pendientes_tipo.iterrows():
+            line(f"{r['Tipo']}: {int(r['Cantidad'])}", font_txt, TEXT_COLOR, line_h)
 
-    # Guardar imagen a buffer
-    buffer = io.BytesIO()
-    img.save(buffer, format="PNG")
-    buffer.seek(0)
-    return buffer
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+    return buf
 
 def debug_fechas_cierre(df_reclamos):
     """Función para debuggear problemas con fechas de cierre"""
