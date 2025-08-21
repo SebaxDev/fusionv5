@@ -407,7 +407,7 @@ with st.sidebar:
         f"""
         <hr style="border:1px solid var(--border-light); margin:1rem 0;" />
         <div style="text-align:center; font-size:0.8rem; color: var(--text-muted);">
-            Desarrollado con 💜 por  
+            Desarrollado con 💜<br>por  
             <a href="https://instagram.com/mellamansebax" target="_blank" 
                style="color: var(--primary-color); text-decoration:none; font-weight:600;">
                Sebastián Andrés
