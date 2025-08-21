@@ -16,6 +16,19 @@ from config.settings import (
     DEBUG_MODE
 )
 
+# === Helpers para mapear nombre de columna -> letra de Excel ===
+def _excel_col_letter(n: int) -> str:
+    letters = ""
+    while n:
+        n, rem = divmod(n - 1, 26)
+        letters = chr(65 + rem) + letters
+    return letters
+
+def _col_letter(col_name: str) -> str:
+    # Usa la lista oficial de columnas de la app
+    idx = COLUMNAS_RECLAMOS.index(col_name) + 1
+    return _excel_col_letter(idx)
+
 def mostrar_overlay_cargando(mensaje="Procesando..."):
     st.markdown(f"""
         <div id="overlay-cargando" style="
@@ -169,9 +182,13 @@ def _mostrar_reasignacion_tecnico(df_reclamos, sheet_reclamos):
             try:
                 fila_index = reclamo.name + 2
                 nuevo_tecnico = ", ".join(nuevo_tecnico_multiselect).upper()
-                updates = [{"range": f"J{fila_index}", "values": [[nuevo_tecnico]]}]
+
+                col_tecnico = _col_letter("Técnico")
+                col_estado  = _col_letter("Estado")
+
+                updates = [{"range": f"{col_tecnico}{fila_index}", "values": [[nuevo_tecnico]]}]
                 if reclamo['Estado'] == "Pendiente":
-                    updates.append({"range": f"I{fila_index}", "values": [["En curso"]]})
+                    updates.append({"range": f"{col_estado}{fila_index}", "values": [["En curso"]]})
 
                 success, error = api_manager.safe_sheet_operation(
                     batch_update_sheet,
@@ -179,11 +196,8 @@ def _mostrar_reasignacion_tecnico(df_reclamos, sheet_reclamos):
                     updates,
                     is_batch=True
                 )
-
                 if success:
                     st.success("✅ Técnico actualizado correctamente.")
-                    
-                    # Agregar notificación
                     if 'notification_manager' in st.session_state and nuevo_tecnico:
                         mensaje = f"📌 El cliente N° {reclamo['Nº Cliente']} fue asignado al técnico {nuevo_tecnico}."
                         st.session_state.notification_manager.add(
@@ -239,7 +253,7 @@ def _mostrar_reclamos_en_curso(df_reclamos, df_clientes, sheet_reclamos, sheet_c
         ]
 
     st.write("### 📋 Reclamos en curso:")
-    df_mostrar = en_curso[["Fecha_formateada", "Nº Cliente", "Nombre", "Sector", "Tipo de reclamo", "Técnico"]].copy()
+    df_mostrar = en_curso[["Fecha y hora", "Nº Cliente", "Nombre", "Sector", "Tipo de reclamo", "Técnico"]].copy()
     df_mostrar = df_mostrar.rename(columns={"Fecha_formateada": "Fecha y hora"})
 
     st.dataframe(df_mostrar, use_container_width=True, height=400,
@@ -296,28 +310,36 @@ def _cerrar_reclamo(row, nuevo_precinto, precinto_actual, cliente_info, sheet_re
     """Maneja el cierre de un reclamo, devuelve True si hubo cambios"""
     try:
         mostrar_overlay_cargando("Cerrando reclamo...")
-        time.sleep(2)  # para que el usuario perciba el efecto
+        time.sleep(2)  # efecto visual
 
         fila_index = row.name + 2
-        updates = [{"range": f"I{fila_index}", "values": [["Resuelto"]]}]
-        
-        if len(COLUMNAS_RECLAMOS) > 12:
-            fecha_resolucion = format_fecha(ahora_argentina())
-            updates.append({"range": f"M{fila_index}", "values": [[fecha_resolucion]]})
-        
+
+        col_estado           = _col_letter("Estado")
+        col_fecha_formateada = _col_letter("Fecha_formateada")
+        col_precinto         = _col_letter("N° de Precinto")
+
+        # Fecha y hora exacta de cierre (Argentina)
+        fecha_resolucion = ahora_argentina().strftime('%d/%m/%Y %H:%M')
+
+        updates = [
+            {"range": f"{col_estado}{fila_index}", "values": [["Resuelto"]]},
+            {"range": f"{col_fecha_formateada}{fila_index}", "values": [[fecha_resolucion]]},
+        ]
+
         if nuevo_precinto.strip() and nuevo_precinto != precinto_actual:
-            updates.append({"range": f"F{fila_index}", "values": [[nuevo_precinto.strip()]]})
-        
+            updates.append({"range": f"{col_precinto}{fila_index}", "values": [[nuevo_precinto.strip()]]})
+
         success, error = api_manager.safe_sheet_operation(
             batch_update_sheet,
             sheet_reclamos,
             updates,
             is_batch=True
         )
-        
+
         if success:
             if nuevo_precinto.strip() and nuevo_precinto != precinto_actual and not cliente_info.empty:
                 index_cliente_en_clientes = cliente_info.index[0] + 2
+                # Actualiza precinto también en clientes (columna F si allí no cambiaron)
                 success_precinto, error_precinto = api_manager.safe_sheet_operation(
                     sheet_clientes.update,
                     f"F{index_cliente_en_clientes}",
@@ -325,7 +347,7 @@ def _cerrar_reclamo(row, nuevo_precinto, precinto_actual, cliente_info, sheet_re
                 )
                 if not success_precinto:
                     st.warning(f"⚠️ Precinto guardado en reclamo pero no en hoja de clientes: {error_precinto}")
-            
+
             st.success(f"🟢 Reclamo de {row['Nombre']} cerrado correctamente.")
             return True
         else:
@@ -336,21 +358,27 @@ def _cerrar_reclamo(row, nuevo_precinto, precinto_actual, cliente_info, sheet_re
         st.error(f"❌ Error inesperado: {str(e)}")
         if DEBUG_MODE:
             st.exception(e)
-    
-    return False
 
+    return False
 
 def _volver_a_pendiente(row, sheet_reclamos):
     """Devuelve un reclamo a estado pendiente, devuelve True si hubo cambios"""
     try:
         mostrar_overlay_cargando("Cambiando estado...")
-        time.sleep(2)  # para que el usuario perciba el efecto
+        time.sleep(2)
 
         fila_index = row.name + 2
+
+        col_estado           = _col_letter("Estado")
+        col_tecnico          = _col_letter("Técnico")
+        col_fecha_formateada = _col_letter("Fecha_formateada")
+
         updates = [
-            {"range": f"I{fila_index}", "values": [["Pendiente"]]},
-            {"range": f"J{fila_index}", "values": [[""]]}
+            {"range": f"{col_estado}{fila_index}", "values": [["Pendiente"]]},
+            {"range": f"{col_tecnico}{fila_index}", "values": [[""]]},
+            {"range": f"{col_fecha_formateada}{fila_index}", "values": [[""]]},
         ]
+
         success, error = api_manager.safe_sheet_operation(
             batch_update_sheet,
             sheet_reclamos,
@@ -368,7 +396,7 @@ def _volver_a_pendiente(row, sheet_reclamos):
         st.error(f"❌ Error inesperado: {str(e)}")
         if DEBUG_MODE:
             st.exception(e)
-    
+
     return False
 
 def _mostrar_limpieza_reclamos(df_reclamos, sheet_reclamos):

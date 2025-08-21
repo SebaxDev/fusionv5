@@ -439,7 +439,7 @@ app_state = AppState()
 
 @st.cache_data(ttl=30, show_spinner=False)
 def cargar_datos():
-    """Carga datos de Google Sheets con manejo robusto de nombres y fechas + debug."""
+    """Carga datos de Google Sheets con manejo robusto de nombres y fechas."""
     try:
         loading_placeholder = st.empty()
         loading_placeholder.markdown(get_loading_spinner(), unsafe_allow_html=True)
@@ -486,12 +486,6 @@ def cargar_datos():
             if col in df_reclamos.columns:
                 df_reclamos[col] = df_reclamos[col].astype(str).str.strip()
 
-        # --- DEBUG inicial: cómo vienen las fechas crudas ---
-        if "Fecha_formateada" in df_reclamos.columns:
-            st.write("DEBUG (CRUDO) -> Ejemplos Fecha_formateada:", df_reclamos["Fecha_formateada"].head(20).tolist())
-        if "Fecha y hora" in df_reclamos.columns:
-            st.write("DEBUG (CRUDO) -> Ejemplos Fecha y hora:", df_reclamos["Fecha y hora"].head(20).tolist())
-
         # Parseo seguro: Fecha y hora (ingreso)
         if "Fecha y hora" in df_reclamos.columns:
             df_reclamos["Fecha y hora"] = df_reclamos["Fecha y hora"].apply(
@@ -516,11 +510,6 @@ def cargar_datos():
                 dayfirst=True,
                 infer_datetime_format=True
             )
-            # --- DEBUG después del parseo ---
-            st.write("DEBUG (POST-PARSE) -> Muestra Fecha_formateada:",
-                     df_reclamos["Fecha_formateada"].head(20).astype(str).tolist())
-            st.write("DEBUG (POST-PARSE) -> Tipos detectados:",
-                     df_reclamos["Fecha_formateada"].dropna().map(type).value_counts().to_dict())
         else:
             df_reclamos["Fecha_formateada"] = pd.NaT
 
@@ -538,18 +527,6 @@ df_reclamos, df_clientes, df_usuarios = cargar_datos()
 st.session_state.df_reclamos = df_reclamos
 st.session_state.df_clientes = df_clientes
 st.session_state.df_usuarios = df_usuarios
-
-# --- DEBUG RÁPIDO para confirmar que Fecha_formateada llegó bien ---
-st.write("DEBUG -> Columnas reclamos:", df_reclamos.columns.tolist())
-if "Fecha_formateada" in df_reclamos.columns:
-    st.write("DEBUG -> Muestra Fecha_formateada (10):", df_reclamos["Fecha_formateada"].head(10).astype(str).tolist())
-    try:
-        tipos = df_reclamos["Fecha_formateada"].dropna().map(type).value_counts()
-        st.write("DEBUG -> Tipos en Fecha_formateada:", tipos.to_dict())
-    except Exception as e:
-        st.write("DEBUG -> No se pudo calcular tipos:", str(e))
-else:
-    st.warning("DEBUG -> No existe la columna 'Fecha_formateada' luego de cargar datos.")
 
 # --------------------------
 # INTERFAZ PRINCIPAL OPTIMIZADA
