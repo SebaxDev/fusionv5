@@ -50,18 +50,23 @@ def generar_reporte_diario_imagen(df_reclamos):
     ahora = ahora_argentina()
     hace_24_horas = ahora - pd.Timedelta(hours=24)
     
+    # 🎯 CORRECCIÓN: Asegurar que ambas fechas estén en la misma timezone
+    # Convertir hace_24_horas a naive datetime (sin timezone) para comparar
+    hace_24_horas_naive = hace_24_horas.replace(tzinfo=None)
+    
     # Reclamos ingresados en las últimas 24 horas
     reclamos_24h = df_reclamos[
         (df_reclamos['Fecha y hora'].notna()) &
-        (df_reclamos['Fecha y hora'] >= hace_24_horas)
+        (df_reclamos['Fecha y hora'] >= hace_24_horas_naive)
     ]
     total_24h = len(reclamos_24h)
     
     # Reclamos resueltos en las últimas 24 horas
+    # 🎯 CORRECCIÓN: Usar .dt.tz_localize(None) para quitar timezone si existe
     resueltos_24h = df_reclamos[
         (df_reclamos['Estado'] == 'Resuelto') &
         (df_reclamos['Fecha_formateada'].notna()) &
-        (df_reclamos['Fecha_formateada'] >= hace_24_horas)
+        (df_reclamos['Fecha_formateada'].dt.tz_localize(None) >= hace_24_horas_naive)
     ]
 
     # Agrupar por técnico
