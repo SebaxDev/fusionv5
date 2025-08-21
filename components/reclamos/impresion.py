@@ -99,7 +99,8 @@ def render_impresion_reclamos(df_reclamos, df_clientes, user):
 
     with col_img:
         if st.button("🖼️ Generar imagen del día"):
-            img_buffer = generar_reporte_diario_imagen(st.session_state.df_reclamos)
+            # Usar el dataframe que recibió el componente (más confiable y testeable)
+            img_buffer = generar_reporte_diario_imagen(df_reclamos)
             fecha_hoy = ahora_argentina().strftime("%Y-%m-%d")
             st.download_button(
                 label="⬇️ Descargar Reporte Diario",
@@ -110,7 +111,7 @@ def render_impresion_reclamos(df_reclamos, df_clientes, user):
 
     with col_debug:
         if st.button("🔍 Debug Fechas Cierre"):
-            debug_fechas_cierre(st.session_state.df_reclamos)
+            debug_fechas_cierre(df_reclamos)
 
     return result
 

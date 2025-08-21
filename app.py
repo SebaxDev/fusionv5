@@ -439,43 +439,76 @@ app_state = AppState()
 
 @st.cache_data(ttl=30, show_spinner=False)
 def cargar_datos():
-    """Carga datos de Google Sheets con manejo robusto de fechas"""
+    """Carga datos de Google Sheets con manejo robusto de nombres y fechas."""
     try:
         loading_placeholder = st.empty()
         loading_placeholder.markdown(get_loading_spinner(), unsafe_allow_html=True)
-        
+
         df_reclamos = safe_get_sheet_data(sheet_reclamos, COLUMNAS_RECLAMOS)
         df_clientes = safe_get_sheet_data(sheet_clientes, COLUMNAS_CLIENTES)
         df_usuarios = safe_get_sheet_data(sheet_usuarios, COLUMNAS_USUARIOS)
-        
+
         if df_reclamos.empty:
             show_warning("La hoja de reclamos está vacía o no se pudo cargar")
         if df_clientes.empty:
             show_warning("La hoja de clientes está vacía o no se pudo cargar")
         if df_reclamos.empty or df_clientes.empty:
             return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
-        
-        # Normalización de datos
+
+        # --- Normalizar nombres de columnas (quitar espacios)
+        df_reclamos.columns = [str(c).strip() for c in df_reclamos.columns]
+        df_clientes.columns = [str(c).strip() for c in df_clientes.columns]
+        df_usuarios.columns = [str(c).strip() for c in df_usuarios.columns]
+
+        # --- Detectar variantes y renombrar a los nombres esperados ---
+        import re
+        def _canon(colname):
+            return re.sub(r'[^a-z0-9]', '', str(colname).lower())
+
+        # Mapeos posibles a "Fecha_formateada"
+        for col in list(df_reclamos.columns):
+            if _canon(col) in ("fechaformateada","fechadecierre","fechacierre","fecha_cierre","fechacierrehora"):
+                if col != "Fecha_formateada":
+                    df_reclamos.rename(columns={col: "Fecha_formateada"}, inplace=True)
+                break
+
+        # Mapeos posibles a "Fecha y hora" (ingreso)
+        for col in list(df_reclamos.columns):
+            if _canon(col) in ("fechayhora","fechahora","fechaingreso","fechaingresohora","fecha_hora"):
+                if col != "Fecha y hora":
+                    df_reclamos.rename(columns={col: "Fecha y hora"}, inplace=True)
+                break
+
+        # Normalizaciones simples
         for col in ["Nº Cliente", "N° de Precinto"]:
             if col in df_clientes.columns:
                 df_clientes[col] = df_clientes[col].astype(str).str.strip()
             if col in df_reclamos.columns:
                 df_reclamos[col] = df_reclamos[col].astype(str).str.strip()
 
-        if 'Fecha y hora' in df_reclamos.columns:
-            df_reclamos['Fecha y hora'] = df_reclamos['Fecha y hora'].apply(
+        # Parseo seguro: Fecha y hora (ingreso)
+        if "Fecha y hora" in df_reclamos.columns:
+            df_reclamos["Fecha y hora"] = df_reclamos["Fecha y hora"].apply(
                 lambda x: parse_fecha(x) if not pd.isna(x) else pd.NaT
             )
 
-        # Si la hoja trae 'Fecha_formateada' como texto y querés asegurarte que sea datetime:
-        if 'Fecha_formateada' in df_reclamos.columns:
-            df_reclamos['Fecha_formateada'] = pd.to_datetime(
-                df_reclamos['Fecha_formateada'].astype(str).str.replace(r"\s+", " ", regex=True).str.strip().replace({"": None, "nan": None}),
-                errors='coerce', dayfirst=True, infer_datetime_format=True
+        # Parseo seguro: Fecha_formateada (cierre) - no la sobreescribimos usando 'Fecha y hora'
+        if "Fecha_formateada" in df_reclamos.columns:
+            df_reclamos["Fecha_formateada"] = pd.to_datetime(
+                df_reclamos["Fecha_formateada"].astype(str)
+                    .str.replace(r"\s+", " ", regex=True)
+                    .str.strip()
+                    .replace({"": None, "nan": None}),
+                errors="coerce",
+                dayfirst=True,
+                infer_datetime_format=True
             )
-           
+        else:
+            # Si no existe, crearla vacía (para evitar KeyError luego)
+            df_reclamos["Fecha_formateada"] = pd.NaT
+
         return df_reclamos, df_clientes, df_usuarios
-        
+
     except Exception as e:
         show_error(f"Error al cargar datos: {str(e)}")
         if DEBUG_MODE:
@@ -488,6 +521,18 @@ df_reclamos, df_clientes, df_usuarios = cargar_datos()
 st.session_state.df_reclamos = df_reclamos
 st.session_state.df_clientes = df_clientes
 st.session_state.df_usuarios = df_usuarios
+
+# --- DEBUG RÁPIDO para confirmar que Fecha_formateada llegó bien ---
+st.write("DEBUG -> Columnas reclamos:", df_reclamos.columns.tolist())
+if "Fecha_formateada" in df_reclamos.columns:
+    st.write("DEBUG -> Muestra Fecha_formateada (10):", df_reclamos["Fecha_formateada"].head(10).astype(str).tolist())
+    try:
+        tipos = df_reclamos["Fecha_formateada"].dropna().map(type).value_counts()
+        st.write("DEBUG -> Tipos en Fecha_formateada:", tipos.to_dict())
+    except Exception as e:
+        st.write("DEBUG -> No se pudo calcular tipos:", str(e))
+else:
+    st.warning("DEBUG -> No existe la columna 'Fecha_formateada' luego de cargar datos.")
 
 # --------------------------
 # INTERFAZ PRINCIPAL OPTIMIZADA
