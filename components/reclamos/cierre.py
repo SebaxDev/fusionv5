@@ -30,12 +30,47 @@ def _col_letter(col_name: str) -> str:
     return _excel_col_letter(idx)
 
 def mostrar_overlay_cargando(mensaje="Procesando..."):
-    """Usa el spinner de styles.py"""
-    from styles import get_loading_spinner
-    st.markdown(get_loading_spinner(), unsafe_allow_html=True)
+    """Usa el spinner estilo Monokai"""
+    st.markdown(f"""
+    <div style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: rgba(39, 40, 34, 0.95);
+        z-index: 9999;
+        backdrop-filter: blur(8px);
+    ">
+        <div style="text-align: center;">
+            <div style="
+                width: 80px;
+                height: 80px;
+                border: 4px solid rgba(73, 72, 62, 0.3);
+                border-radius: 50%;
+                border-top-color: #66D9EF;
+                border-right-color: #F92672;
+                border-bottom-color: #A6E22E;
+                animation: spin 1.5s ease-in-out infinite;
+                margin-bottom: 1rem;
+            "></div>
+            <p style="color: #F8F8F2; font-size: 1.1rem; font-weight: 500; margin: 0;">
+                {mensaje}
+            </p>
+        </div>
+        <style>
+        @keyframes spin {{
+            to {{ transform: rotate(360deg); }}
+        }}
+        </style>
+    </div>
+    """, unsafe_allow_html=True)
     # Forzar renderizado inmediato
     st.empty()
-    return "overlay_global"  # ID único para este tipo de overlay
+    return "overlay_global"
 
 def ocultar_overlay_cargando(overlay_id):
     """Oculta el overlay global"""
