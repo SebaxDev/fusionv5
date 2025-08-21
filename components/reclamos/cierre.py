@@ -34,23 +34,6 @@ def mostrar_overlay_cargando(mensaje="Procesando..."):
     return st.spinner(mensaje)
 
 def render_cierre_reclamos(df_reclamos, df_clientes, sheet_reclamos, sheet_clientes, user):
-    """
-    Muestra la interfaz para el cierre de reclamos
-    
-    Args:
-        df_reclamos (pd.DataFrame): DataFrame con los reclamos
-        df_clientes (pd.DataFrame): DataFrame con los clientes
-        sheet_reclamos: Conexión a la hoja de reclamos
-        sheet_clientes: Conexión a la hoja de clientes
-        user (dict): Información del usuario actual
-        
-    Returns:
-        dict: {
-            'needs_refresh': bool,  # Si se necesita recargar datos
-            'message': str,         # Mensaje para mostrar al usuario
-            'data_updated': bool    # Si se modificaron datos
-        }
-    """
     result = {
         'needs_refresh': False,
         'message': None,
@@ -67,9 +50,6 @@ def render_cierre_reclamos(df_reclamos, df_clientes, sheet_reclamos, sheet_clien
         df_reclamos["Fecha y hora"] = df_reclamos["Fecha y hora"].apply(parse_fecha)
 
         # Procesar cada sección
-        cambios = False
-        
-        # Sección 1: Reasignación de técnicos
         cambios_tecnicos = _mostrar_reasignacion_tecnico(df_reclamos, sheet_reclamos)
         if cambios_tecnicos:
             result.update({
@@ -79,7 +59,6 @@ def render_cierre_reclamos(df_reclamos, df_clientes, sheet_reclamos, sheet_clien
             })
             return result
 
-        # Sección 2: Reclamos en curso
         cambios_cierre = _mostrar_reclamos_en_curso(df_reclamos, df_clientes, sheet_reclamos, sheet_clientes)
         if cambios_cierre:
             result.update({
@@ -89,7 +68,6 @@ def render_cierre_reclamos(df_reclamos, df_clientes, sheet_reclamos, sheet_clien
             })
             return result
 
-        # Sección 3: Limpieza de reclamos antiguos
         cambios_limpieza = _mostrar_limpieza_reclamos(df_reclamos, sheet_reclamos)
         if cambios_limpieza:
             result.update({
@@ -108,7 +86,6 @@ def render_cierre_reclamos(df_reclamos, df_clientes, sheet_reclamos, sheet_clien
     return result
 
 def _mostrar_reasignacion_tecnico(df_reclamos, sheet_reclamos):
-    """Muestra la sección para reasignar técnicos y devuelve si hubo cambios"""
     st.markdown("### 🔄 Reasignar técnico por N° de cliente")
     cliente_busqueda = st.text_input("🔢 Ingresá el N° de Cliente para buscar", key="buscar_cliente_tecnico").strip()
     
@@ -183,10 +160,8 @@ def _mostrar_reasignacion_tecnico(df_reclamos, sheet_reclamos):
     return False
 
 def _mostrar_reclamos_en_curso(df_reclamos, df_clientes, sheet_reclamos, sheet_clientes):
-    """Muestra y gestiona los reclamos en curso, devuelve si hubo cambios"""
     en_curso = df_reclamos[df_reclamos["Estado"] == "En curso"].copy()
     
-    # Filtro por sector
     filtro_sector = st.selectbox(
         "🔢 Filtrar por sector", 
         ["Todos"] + sorted(SECTORES_DISPONIBLES),
@@ -217,23 +192,29 @@ def _mostrar_reclamos_en_curso(df_reclamos, df_clientes, sheet_reclamos, sheet_c
         ]
 
     st.write("### 📋 Reclamos en curso:")
-    df_mostrar = en_curso[["Fecha y hora", "Nº Cliente", "Nombre", "Sector", "Tipo de reclamo", "Técnico"]].copy()
-    df_mostrar = df_mostrar.rename(columns={"Fecha_formateada": "Fecha y hora"})
+    df_mostrar = en_curso[[
+        "Fecha y hora",       # ingreso
+        "Fecha_formateada",   # cierre
+        "Nº Cliente",
+        "Nombre",
+        "Sector",
+        "Tipo de reclamo",
+        "Técnico"
+    ]].copy()
+
+    df_mostrar = df_mostrar.rename(columns={
+        "Fecha y hora": "Ingreso",
+        "Fecha_formateada": "Cierre"
+    })
 
     st.dataframe(df_mostrar, use_container_width=True, height=400,
                 column_config={
-                    "Fecha y hora": st.column_config.TextColumn(
-                        "Fecha y hora",
-                        help="Fecha del reclamo en formato DD/MM/YYYY HH:MM"
-                    ),
-                    "Sector": st.column_config.TextColumn(
-                        "Sector",
-                        help="Número de sector asignado"
-                    )
+                    "Ingreso": st.column_config.TextColumn("Ingreso", help="Fecha de ingreso"),
+                    "Cierre": st.column_config.TextColumn("Cierre", help="Fecha de cierre (si está resuelto)"),
+                    "Sector": st.column_config.TextColumn("Sector", help="Número de sector asignado")
                 })
 
     st.markdown("### ✏️ Acciones por reclamo:")
-    
     cambios = False
     
     for i, row in en_curso.iterrows():
@@ -242,7 +223,8 @@ def _mostrar_reclamos_en_curso(df_reclamos, df_clientes, sheet_reclamos, sheet_c
 
             with col1:
                 st.markdown(f"**#{row['Nº Cliente']} - {row['Nombre']}**")
-                st.markdown(f"📅 {format_fecha(row['Fecha y hora'])}")
+                st.markdown(f"📅 Ingreso: {format_fecha(row['Fecha y hora'])}")
+                st.markdown(f"📅 Cierre: {row.get('Fecha_formateada', '') or '—'}")
                 st.markdown(f"📍 Sector: {row.get('Sector', 'N/A')}")
                 st.markdown(f"📌 {row['Tipo de reclamo']}")
                 st.markdown(f"👷 {row['Técnico']}")
@@ -257,31 +239,28 @@ def _mostrar_reclamos_en_curso(df_reclamos, df_clientes, sheet_reclamos, sheet_c
                 if st.button("✅ Resuelto", key=f"resolver_{row['ID Reclamo']}", use_container_width=True):
                     if _cerrar_reclamo(row, nuevo_precinto, precinto_actual, cliente_info, sheet_reclamos, sheet_clientes):
                         cambios = True
-                        st.rerun()  # Forzar recarga inmediata
+                        st.rerun()
 
             with col3:
                 if st.button("↩️ Pendiente", key=f"volver_{row['ID Reclamo']}", use_container_width=True):
                     if _volver_a_pendiente(row, sheet_reclamos):
                         cambios = True
-                        st.rerun()  # Forzar recarga inmediata
+                        st.rerun()
 
             st.divider()
     
     return cambios
 
 def _cerrar_reclamo(row, nuevo_precinto, precinto_actual, cliente_info, sheet_reclamos, sheet_clientes):
-    """Maneja el cierre de un reclamo, devuelve True si hubo cambios"""
     try:
         with st.spinner("Cerrando reclamo..."):
-            time.sleep(1)  # efecto visual breve
-
+            time.sleep(1)
             fila_index = row.name + 2
 
             col_estado           = _col_letter("Estado")
             col_fecha_formateada = _col_letter("Fecha_formateada")
             col_precinto         = _col_letter("N° de Precinto")
 
-            # Fecha y hora exacta de cierre (Argentina)
             fecha_resolucion = ahora_argentina().strftime('%d/%m/%Y %H:%M')
 
             updates = [
@@ -302,7 +281,6 @@ def _cerrar_reclamo(row, nuevo_precinto, precinto_actual, cliente_info, sheet_re
             if success:
                 if nuevo_precinto.strip() and nuevo_precinto != precinto_actual and not cliente_info.empty:
                     index_cliente_en_clientes = cliente_info.index[0] + 2
-                    # Actualiza precinto también en clientes (columna F si allí no cambiaron)
                     success_precinto, error_precinto = api_manager.safe_sheet_operation(
                         sheet_clientes.update,
                         f"F{index_cliente_en_clientes}",
@@ -311,7 +289,7 @@ def _cerrar_reclamo(row, nuevo_precinto, precinto_actual, cliente_info, sheet_re
                     if not success_precinto:
                         st.warning(f"⚠️ Precinto guardado en reclamo pero no en hoja de clientes: {error_precinto}")
 
-                st.success(f"🟢 Reclamo de {row['Nombre']} cerrado correctamente.")
+                st.success(f"🟢 Reclamo de {row['Nombre']} cerrado correctamente. Fecha cierre: {fecha_resolucion}")
                 return True
             else:
                 st.error(f"❌ Error al actualizar: {error}")
@@ -325,11 +303,9 @@ def _cerrar_reclamo(row, nuevo_precinto, precinto_actual, cliente_info, sheet_re
     return False
 
 def _volver_a_pendiente(row, sheet_reclamos):
-    """Devuelve un reclamo a estado pendiente, devuelve True si hubo cambios"""
     try:
         with st.spinner("Cambiando estado..."):
-            time.sleep(1)  # efecto visual breve
-
+            time.sleep(1)
             fila_index = row.name + 2
 
             col_estado           = _col_letter("Estado")
@@ -350,7 +326,7 @@ def _volver_a_pendiente(row, sheet_reclamos):
             )
             
             if success:
-                st.success(f"🔄 Reclamo de {row['Nombre']} vuelto a PENDIENTE.")
+                st.success(f"🔄 Reclamo de {row['Nombre']} vuelto a PENDIENTE. Se borró la fecha de cierre.")
                 return True
             else:
                 st.error(f"❌ Error al actualizar: {error}")
@@ -364,7 +340,6 @@ def _volver_a_pendiente(row, sheet_reclamos):
     return False
 
 def _mostrar_limpieza_reclamos(df_reclamos, sheet_reclamos):
-    """Muestra la sección para limpieza de reclamos antiguos, devuelve True si hubo cambios"""
     st.markdown("---")
     st.markdown("### 🗑️ Limpieza de reclamos antiguos")
 
@@ -389,49 +364,3 @@ def _mostrar_limpieza_reclamos(df_reclamos, sheet_reclamos):
         if st.button("🗑️ Eliminar reclamos antiguos", key="eliminar_antiguos"):
             with st.spinner("Eliminando reclamos antiguos..."):
                 try:
-                    resultado = _eliminar_reclamos_antiguos(df_antiguos, sheet_reclamos)
-                    return resultado
-                except Exception as e:
-                    st.error(f"❌ Error al eliminar reclamos: {str(e)}")
-                    if DEBUG_MODE:
-                        st.exception(e)
-    
-    return False
-
-def _eliminar_reclamos_antiguos(df_antiguos, sheet_reclamos):
-    """Elimina reclamos antiguos de la hoja de cálculo, devuelve True si hubo cambios"""
-    try:
-        filas_a_eliminar = [idx + 2 for idx in df_antiguos.index]
-        batch_size = 50
-        
-        for i in range(0, len(filas_a_eliminar), batch_size):
-            batch = filas_a_eliminar[i:i + batch_size]
-            requests = [{
-                "deleteDimension": {
-                    "range": {
-                        "sheetId": sheet_reclamos.id,
-                        "dimension": "ROWS",
-                        "startIndex": fila - 1,
-                        "endIndex": fila
-                    }
-                }
-            } for fila in batch]
-            
-            success, error = api_manager.safe_sheet_operation(
-                sheet_reclamos.spreadsheet.batch_update,
-                {"requests": requests}
-            )
-            
-            if not success:
-                st.error(f"Error al eliminar lote {i//batch_size + 1}: {error}")
-                return False
-        
-        if success:
-            st.success(f"✅ Se eliminaron {len(df_antiguos)} reclamos antiguos correctamente.")
-            return True
-    except Exception as e:
-        st.error(f"❌ Error al eliminar reclamos: {str(e)}")
-        if DEBUG_MODE:
-            st.exception(e)
-    
-    return False
