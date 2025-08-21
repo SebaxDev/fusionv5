@@ -46,44 +46,27 @@ def generar_reporte_diario_imagen(df_reclamos):
         # Si no existe la columna, crear una vacía
         df_reclamos["Fecha_formateada"] = pd.NaT
 
-    # Reclamos ingresados hoy
-    hoy = ahora_argentina().date()
-    reclamos_hoy = df_reclamos[df_reclamos['Fecha y hora'].dt.date == hoy]
-    total_hoy = len(reclamos_hoy)
-
-    # MEJORAR: Incluir también reclamos resueltos sin fecha pero con estado "Resuelto"
-    resueltos_hoy = df_reclamos[
-        (df_reclamos['Estado'] == 'Resuelto') &
-        (
-            # Caso 1: Tiene fecha de hoy
-            ((df_reclamos['Fecha_formateada'].notna()) &
-             (df_reclamos['Fecha_formateada'].dt.date == hoy)) |
-            # Caso 2: No tiene fecha pero está resuelto (asumimos hoy)
-            (df_reclamos['Fecha_formateada'].isna())
-        )
-    ]
-
-    # Agrupar por técnico - manejar casos donde Técnico podría estar vacío
-    tecnicos_resueltos = (
-        resueltos_hoy.groupby('Técnico')['Estado']
-        .count()
-        .reset_index()
-        .sort_values(by='Estado', ascending=False)
-    )
-
-    # Reclamos resueltos por técnico/grupo basados en la fecha de cierre HOY
-    # Obtener el inicio y fin del día en Argentina timezone
-    inicio_dia = ahora_argentina().replace(hour=0, minute=0, second=0, microsecond=0)
-    fin_dia = inicio_dia.replace(hour=23, minute=59, second=59, microsecond=999999)
+    # 🎯 CAMBIO IMPORTANTE: Considerar últimas 24 horas en lugar de solo "hoy"
+    ahora = ahora_argentina()
+    hace_24_horas = ahora - pd.Timedelta(hours=24)
     
-    resueltos_hoy = df_reclamos[
+    # Reclamos ingresados en las últimas 24 horas
+    reclamos_24h = df_reclamos[
+        (df_reclamos['Fecha y hora'].notna()) &
+        (df_reclamos['Fecha y hora'] >= hace_24_horas)
+    ]
+    total_24h = len(reclamos_24h)
+    
+    # Reclamos resueltos en las últimas 24 horas
+    resueltos_24h = df_reclamos[
+        (df_reclamos['Estado'] == 'Resuelto') &
         (df_reclamos['Fecha_formateada'].notna()) &
-        (df_reclamos['Fecha_formateada'].dt.date == hoy) &
-        (df_reclamos['Estado'] == 'Resuelto')
+        (df_reclamos['Fecha_formateada'] >= hace_24_horas)
     ]
 
+    # Agrupar por técnico
     tecnicos_resueltos = (
-        resueltos_hoy.groupby('Técnico')['Estado']
+        resueltos_24h.groupby('Técnico')['Estado']
         .count()
         .reset_index()
         .sort_values(by='Estado', ascending=False)
@@ -112,16 +95,19 @@ def generar_reporte_diario_imagen(df_reclamos):
 
     draw_line("", font_text, TEXT_COLOR, line_height // 2)
 
-    draw_line(f"■ Reclamos ingresados hoy: {total_hoy}", font_subtitle, HIGHLIGHT_COLOR, line_height)
+    # 🎯 CAMBIO: De "hoy" a "24h"
+    draw_line(f"■ Reclamos ingresados (24h): {total_24h}", font_subtitle, HIGHLIGHT_COLOR, line_height)
 
     draw_line("", font_text, TEXT_COLOR, line_height // 2)
 
-    draw_line("■ Reporte técnico/grupo:", font_subtitle, HIGHLIGHT_COLOR, line_height)
+    # 🎯 CAMBIO: De "hoy" a "24h"
+    draw_line("■ Reporte técnico/grupo (24h):", font_subtitle, HIGHLIGHT_COLOR, line_height)
     if tecnicos_resueltos.empty:
-        draw_line("No hay reclamos resueltos hoy", font_text, TEXT_COLOR, line_height)
+        draw_line("No hay reclamos resueltos en las últimas 24h", font_text, TEXT_COLOR, line_height)
     else:
         for _, row in tecnicos_resueltos.iterrows():
-            draw_line(f"{row['Técnico']}: {row['Estado']} resueltos", font_text, TEXT_COLOR, line_height)
+            # 🎯 CAMBIO: Texto más claro
+            draw_line(f"{row['Técnico']}: {row['Estado']} resueltos (24h)", font_text, TEXT_COLOR, line_height)
 
     draw_line("", font_text, TEXT_COLOR, line_height // 2)
 
@@ -134,7 +120,6 @@ def generar_reporte_diario_imagen(df_reclamos):
     img.save(buffer, format="PNG")
     buffer.seek(0)
     return buffer
-
 
 def debug_fechas_cierre(df_reclamos):
     """Función para debuggear problemas con fechas de cierre"""
