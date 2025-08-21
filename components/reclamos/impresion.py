@@ -94,6 +94,9 @@ def render_impresion_reclamos(df_reclamos, df_clientes, user):
     # === NUEVA SECCIÓN: Reporte Diario ===
     st.markdown("### 📄 Generar Reporte Diario (PNG)")
 
+    # Definir columna para el botón (centrado)
+    _, col_img, _ = st.columns([1, 2, 1])
+
     with col_img:
         if st.button("🖼️ Generar imagen del día"):
             # Usar el dataframe que recibió el componente (más confiable y testeable)
@@ -105,6 +108,7 @@ def render_impresion_reclamos(df_reclamos, df_clientes, user):
                 file_name=f"reporte_diario_{fecha_hoy}.png",
                 mime="image/png"
             )
+
 
     return result
 
