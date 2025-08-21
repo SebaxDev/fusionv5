@@ -387,26 +387,31 @@ with st.sidebar:
             st.session_state.uuid_migration_in_progress = False
     
     # En el sidebar, mejora el footer:
-    st.markdown(f"""
-    <div style="margin-top: 2rem; padding: 1rem; background: var(--bg-surface); border-radius: var(--radius-lg); border: 1px solid var(--border-color);">
-        <div style="text-align: center; margin-bottom: 1rem;">
-            <div style="font-size: 2rem; margin-bottom: 0.5rem;">⚡</div>
-            <p style="margin:0; font-size: 0.9rem; color: var(--text-secondary);"><strong>Versión:</strong> 2.3.0</p>
-            <p style="margin:0; font-size: 0.8rem; color: var(--text-muted);">Ultima actualización</p>
-            <p style="margin:0; font-size: 0.9rem; color: var(--primary-color); font-weight: 600;">{ahora_argentina().strftime('%d/%m/%Y %H:%M')}</p>
+    st.markdown(
+        f"""
+        <div style="margin-top: 2rem; padding: 1rem; background: var(--bg-surface); border-radius: var(--radius-lg); border: 1px solid var(--border-color);">
+            <div style="text-align: center; margin-bottom: 1rem;">
+                <div style="font-size: 2rem; margin-bottom: 0.5rem;">⚡</div>
+                <p style="margin:0; font-size: 0.9rem; color: var(--text-secondary);"><strong>Versión:</strong> 2.3.0</p>
+                <p style="margin:0; font-size: 0.8rem; color: var(--text-muted);">Última actualización</p>
+                <p style="margin:0; font-size: 0.9rem; color: var(--primary-color); font-weight: 600;">
+                    {ahora_argentina().strftime('%d/%m/%Y %H:%M')}
+                </p>
+            </div>
+            
+            <div style="text-align: center; padding: 1rem 0; border-top: 1px solid var(--border-light);">
+                <p style="margin:0; font-size: 0.8rem; color: var(--text-muted);">
+                    Desarrollado con 💜 por
+                </p>
+                <a href="https://instagram.com/mellamansebax" target="_blank" 
+                   style="color: var(--primary-color); text-decoration: none; font-weight: 600; font-size: 0.9rem;">
+                    Sebastián Andrés
+                </a>
+            </div>
         </div>
-        
-        <div style="text-align: center; padding: 1rem 0; border-top: 1px solid var(--border-light);">
-            <p style="margin:0; font-size: 0.8rem; color: var(--text-muted);">
-                Desarrollado con 💜 por
-            </p>
-            <a href="https://instagram.com/mellamansebax" target="_blank" 
-               style="color: var(--primary-color); text-decoration: none; font-weight: 600; font-size: 0.9rem;">
-                Sebastián Andrés
-            </a>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+        """,
+        unsafe_allow_html=True
+    )
 
 # --------------------------
 # INICIALIZACIÓN
