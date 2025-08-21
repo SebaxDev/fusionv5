@@ -54,11 +54,21 @@ def generar_reporte_diario_imagen(df_reclamos):
     # Convertir hace_24_horas a naive datetime (sin timezone) para comparar
     hace_24_horas_naive = hace_24_horas.replace(tzinfo=None)
     
+    # Normalizar fechas
+    df_reclamos["Fecha y hora"] = pd.to_datetime(
+        df_reclamos["Fecha y hora"], 
+        errors="coerce", 
+        dayfirst=True
+    )
+    if pd.api.types.is_datetime64tz_dtype(df_reclamos["Fecha y hora"]):
+        df_reclamos["Fecha y hora"] = df_reclamos["Fecha y hora"].dt.tz_localize(None)
+
     # Reclamos ingresados en las últimas 24 horas
     reclamos_24h = df_reclamos[
         (df_reclamos['Fecha y hora'].notna()) &
         (df_reclamos['Fecha y hora'] >= hace_24_horas_naive)
     ]
+
     total_24h = len(reclamos_24h)
     
     # Reclamos resueltos en las últimas 24 horas
