@@ -9,7 +9,7 @@ from reportlab.pdfgen import canvas
 from utils.date_utils import format_fecha, parse_fecha
 from utils.pdf_utils import agregar_pie_pdf
 from utils.date_utils import ahora_argentina
-from utils.reporte_diario import render_reporte_diario, generar_reporte_diario_imagen
+from utils.reporte_diario import *
 
 
 def render_impresion_reclamos(df_reclamos, df_clientes, user):
