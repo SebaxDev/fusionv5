@@ -364,3 +364,11 @@ def _mostrar_limpieza_reclamos(df_reclamos, sheet_reclamos):
         if st.button("🗑️ Eliminar reclamos antiguos", key="eliminar_antiguos"):
             with st.spinner("Eliminando reclamos antiguos..."):
                 try:
+                    resultado = _eliminar_reclamos_antiguos(df_antiguos, sheet_reclamos)
+                    return resultado
+                except Exception as e:
+                    st.error(f"❌ Error al eliminar reclamos: {str(e)}")
+                    if DEBUG_MODE:
+                        st.exception(e)
+    
+    return False
