@@ -1,100 +1,89 @@
+import io
+import pandas as pd
+from PIL import Image, ImageDraw, ImageFont
+import streamlit as st
+from utils.date_utils import ahora_argentina
+
 def generar_reporte_diario_imagen(df_reclamos):
-    """Genera una imagen PNG con el reporte diario (últimas 24 h)."""
-    import io
-    from PIL import Image, ImageDraw, ImageFont
-    import pandas as pd
-    from utils.date_utils import ahora_argentina
-
-    # ==== Copia segura y normalización de columnas ====
-    df = df_reclamos.copy()
-    df.columns = [str(c).strip() for c in df.columns]
-
-    # Columnas clave (alias por si cambian mayúsculas/espacios)
-    COL_INGRESO = next((c for c in df.columns if c.lower() == "fecha y hora"), "Fecha y hora")
-    COL_CIERRE  = next((c for c in df.columns if c.lower() == "fecha_formateada"), "Fecha_formateada")
-    COL_ESTADO  = next((c for c in df.columns if c.lower() == "estado"), "Estado")
-    COL_TECNICO = next((c for c in df.columns if c.lower() == "técnico"), "Técnico")
-    COL_TIPO    = next((c for c in df.columns if c.lower() == "tipo de reclamo"), "Tipo de reclamo")
-
-    # Asegurar columnas presentes
-    for col in (COL_INGRESO, COL_CIERRE, COL_ESTADO, COL_TECNICO, COL_TIPO):
-        if col not in df.columns:
-            df[col] = pd.NA
-
-    # ==== Parseo de fechas (ingreso y cierre) ====
-    # Ingreso (puede venir con strings varios)
-    df[COL_INGRESO] = (
-        df[COL_INGRESO]
-        .astype(str).str.strip().replace({"", "nan", "NaN", "None": None})
-    )
-    df[COL_INGRESO] = pd.to_datetime(
-        df[COL_INGRESO], errors="coerce", dayfirst=True, infer_datetime_format=True
-    )
-    # Si quedó con tz, la quitamos de forma segura
-    if pd.api.types.is_datetime64tz_dtype(df[COL_INGRESO]):
-        df[COL_INGRESO] = df[COL_INGRESO].dt.tz_localize(None)
-
-    # Cierre (fecha de resolución)
-    df[COL_CIERRE] = (
-        df[COL_CIERRE]
-        .astype(str).str.replace(r"\s+", " ", regex=True)  # colapsar dobles espacios
-        .str.strip().replace({"", "nan", "NaN", "None": None})
-    )
-    df[COL_CIERRE] = pd.to_datetime(
-        df[COL_CIERRE], errors="coerce", dayfirst=True, infer_datetime_format=True
-    )
-    if pd.api.types.is_datetime64tz_dtype(df[COL_CIERRE]):
-        df[COL_CIERRE] = df[COL_CIERRE].dt.tz_localize(None)
-
-    # Estado normalizado
-    df[COL_ESTADO] = df[COL_ESTADO].astype(str).str.strip().str.lower()
-
-    # Técnico / Tipo saneados para agrupar
-    df[COL_TECNICO] = df[COL_TECNICO].fillna("Sin técnico").astype(str).str.strip()
-    df[COL_TIPO] = df[COL_TIPO].fillna("Sin tipo").astype(str).str.strip()
-
-    # ==== Ventana últimas 24 h ====
-    ahora_ts = pd.Timestamp(ahora_argentina()).tz_localize(None)
-    hace_24h = ahora_ts - pd.Timedelta(hours=24)
-
-    # Ingresados últimas 24 h (por fecha de ingreso)
-    mask_ing_24h = df[COL_INGRESO].notna() & (df[COL_INGRESO] >= hace_24h)
-    total_ingresados_24h = int(mask_ing_24h.sum())
-
-    # Resueltos últimas 24 h (por fecha de cierre)
-    mask_res_24h = (
-        (df[COL_ESTADO] == "resuelto")
-        & df[COL_CIERRE].notna()
-        & (df[COL_CIERRE] >= hace_24h)
-    )
-    resueltos_24h = df.loc[mask_res_24h, [COL_TECNICO, COL_ESTADO, COL_CIERRE]]
-
-    # Agrupar resueltos por técnico
-    tecnicos_resueltos = (
-        resueltos_24h.groupby(COL_TECNICO)[COL_ESTADO]
-        .count()
-        .reset_index()
-        .rename(columns={COL_ESTADO: "Cantidad"})
-        .sort_values("Cantidad", ascending=False)
-    )
-
-    # Pendientes por tipo (estado == Pendiente)
-    pendientes = df[df[COL_ESTADO] == "pendiente"]
-    pendientes_tipo = (
-        pendientes.groupby(COL_TIPO)[COL_ESTADO]
-        .count()
-        .reset_index()
-        .rename(columns={COL_ESTADO: "Cantidad", COL_TIPO: "Tipo"})
-        .sort_values("Cantidad", ascending=False)
-    )
-    total_pendientes = int(len(pendientes))
-
-    # ==== Render de imagen ====
+    """
+    Genera una imagen PNG con el reporte diario (últimas 24 h).
+    - Usa 'Fecha y hora' para ingresados en 24h.
+    - Usa 'Fecha_formateada' para resueltos en 24h.
+    - Limpia strings raros, quita TZ si existiera y normaliza 'Estado'.
+    """
+    # ====== Config de imagen ======
     WIDTH, HEIGHT = 1200, 1600
     BG_COLOR = (39, 40, 34)
     TEXT_COLOR = (248, 248, 242)
     HIGHLIGHT_COLOR = (249, 38, 114)
 
+    # ====== Copia y normalización de columnas ======
+    df = df_reclamos.copy()
+    df.columns = [str(c).strip() for c in df.columns]
+
+    # Asegurar columnas clave
+    for col in ["Fecha y hora", "Fecha_formateada", "Estado", "Técnico", "Tipo de reclamo"]:
+        if col not in df.columns:
+            df[col] = pd.NA
+
+    # --- Helper: parseo de fechas seguro ---
+    def _to_datetime_clean(series):
+        s = series.astype(str).str.replace(r"\s+", " ", regex=True).str.strip()
+        s = s.replace({"", "nan", "NaN", "None": None})
+        out = pd.to_datetime(s, errors="coerce", dayfirst=True, infer_datetime_format=True)
+        # si quedó con tz, quitarla SOLO si realmente es tz-aware
+        if pd.api.types.is_datetime64tz_dtype(out):
+            out = out.dt.tz_localize(None)
+        return out
+
+    # Parseo ingreso/cierre
+    df["Fecha y hora"] = _to_datetime_clean(df["Fecha y hora"])
+    df["Fecha_formateada"] = _to_datetime_clean(df["Fecha_formateada"])
+
+    # Normalizar estado
+    df["Estado"] = df["Estado"].astype(str).str.strip().str.lower()
+
+    # Saneos mínimos para agrupar
+    df["Técnico"] = df["Técnico"].fillna("Sin técnico").astype(str).str.strip()
+    df["Tipo de reclamo"] = df["Tipo de reclamo"].fillna("Sin tipo").astype(str).str.strip()
+
+    # ====== Ventana últimas 24h ======
+    ahora_ts = pd.Timestamp(ahora_argentina()).tz_localize(None)  # naive
+    hace_24h = ahora_ts - pd.Timedelta(hours=24)
+
+    # Ingresados (por fecha de ingreso)
+    mask_ing_24h = df["Fecha y hora"].notna() & (df["Fecha y hora"] >= hace_24h)
+    total_ingresados_24h = int(mask_ing_24h.sum())
+
+    # Resueltos (por fecha de cierre)
+    mask_res_24h = (
+        (df["Estado"] == "resuelto") &
+        df["Fecha_formateada"].notna() &
+        (df["Fecha_formateada"] >= hace_24h)
+    )
+    resueltos_24h = df.loc[mask_res_24h, ["Técnico", "Estado", "Fecha_formateada"]]
+
+    # Agrupar resueltos por técnico
+    tecnicos_resueltos = (
+        resueltos_24h.groupby("Técnico")["Estado"]
+        .count()
+        .reset_index()
+        .rename(columns={"Estado": "Cantidad"})
+        .sort_values("Cantidad", ascending=False)
+    )
+
+    # Pendientes por tipo
+    pendientes = df[df["Estado"] == "pendiente"]
+    pendientes_tipo = (
+        pendientes.groupby("Tipo de reclamo")["Estado"]
+        .count()
+        .reset_index()
+        .rename(columns={"Estado": "Cantidad", "Tipo de reclamo": "Tipo"})
+        .sort_values("Cantidad", ascending=False)
+    )
+    total_pendientes = int(len(pendientes))
+
+    # ====== Render de imagen ======
     img = Image.new("RGB", (WIDTH, HEIGHT), BG_COLOR)
     draw = ImageDraw.Draw(img)
 
@@ -130,7 +119,7 @@ def generar_reporte_diario_imagen(df_reclamos):
         line("No hay reclamos resueltos en las últimas 24h", font_txt, TEXT_COLOR, line_h)
     else:
         for _, r in tecnicos_resueltos.iterrows():
-            line(f"{r[COL_TECNICO]}: {int(r['Cantidad'])} resueltos (24h)", font_txt, TEXT_COLOR, line_h)
+            line(f"{r['Técnico']}: {int(r['Cantidad'])} resueltos (24h)", font_txt, TEXT_COLOR, line_h)
 
     line("", font_txt, TEXT_COLOR, line_h // 2)
 
@@ -141,10 +130,10 @@ def generar_reporte_diario_imagen(df_reclamos):
         for _, r in pendientes_tipo.iterrows():
             line(f"{r['Tipo']}: {int(r['Cantidad'])}", font_txt, TEXT_COLOR, line_h)
 
-    buf = io.BytesIO()
-    img.save(buf, format="PNG")
-    buf.seek(0)
-    return buf
+    buffer = io.BytesIO()
+    img.save(buffer, format="PNG")
+    buffer.seek(0)
+    return buffer
 
 def debug_fechas_cierre(df_reclamos):
     """Función para debuggear problemas con fechas de cierre"""
