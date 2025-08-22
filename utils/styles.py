@@ -93,7 +93,7 @@ def get_main_styles(dark_mode=True):
     
     /* MEJORAS PARA CONTENEDORES PRINCIPALES - ANCHO EXPANDIDO */
     .main .block-container {{
-        max-width: 1550px !important;
+        max-width: 1500px !important;
         padding-top: 2rem;
         padding-bottom: 2rem;
         padding-left: 3rem;
@@ -102,7 +102,7 @@ def get_main_styles(dark_mode=True):
     
     /* Cuando el sidebar está colapsado, expandimos el ancho */
     [data-testid="stSidebarCollapsed"] ~ .main .block-container {{
-        max-width: 95% !important;
+        max-width: 90% !important;
         padding-left: 5%;
         padding-right: 5%;
     }}
