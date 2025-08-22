@@ -140,7 +140,13 @@ def render_login(sheet_usuarios):
     }
     </style>
     """
-
+    
+    st.markdown("""
+    <div class="login-container">
+        <div class="login-header">
+            <h1 class="login-title">Fusion CRM</h1>
+        </div>
+    """, unsafe_allow_html=True)
     
     # Inicializar estado de carga
     if 'login_loading' not in st.session_state:
