@@ -56,7 +56,7 @@ def verify_credentials(username, password, sheet_usuarios):
 def render_login(sheet_usuarios):
     """Formulario de login con diseño profesional CRM"""
     
-    # CSS personalizado para el login
+    # CSS personalizado para el login (mantener igual)
     login_styles = """
     <style>
     .login-container {
@@ -146,16 +146,22 @@ def render_login(sheet_usuarios):
     st.markdown("""
     <div class="login-container">
         <div class="login-header">
-            <div class="login-logo">📋</div>
-            <h1 class="login-title">Fusion CRM</h1>
-            <p class="login-subtitle">Sistema profesional de gestión de reclamos</p>
+            <h3 class="login-title">Fusion CRM</h3>
+            <p class="login-subtitle">Sistema profesional en gestión de reclamos</p>
         </div>
     """, unsafe_allow_html=True)
     
-    # Estado para controlar el loading
+    # Inicializar estado de carga
     if 'login_loading' not in st.session_state:
         st.session_state.login_loading = False
+    if 'login_attempt' not in st.session_state:
+        st.session_state.login_attempt = False
+    if 'login_username' not in st.session_state:
+        st.session_state.login_username = ""
+    if 'login_password' not in st.session_state:
+        st.session_state.login_password = ""
     
+    # Mostrar spinner si está cargando
     if st.session_state.login_loading:
         st.markdown(get_loading_spinner(), unsafe_allow_html=True)
         st.markdown("""
@@ -163,7 +169,41 @@ def render_login(sheet_usuarios):
             <p style="color: var(--text-secondary);">Verificando credenciales...</p>
         </div>
         """, unsafe_allow_html=True)
+        
+        # Procesar la autenticación
+        try:
+            user_info = verify_credentials(
+                st.session_state.login_username, 
+                st.session_state.login_password, 
+                sheet_usuarios
+            )
+            
+            if user_info:
+                st.session_state.auth = {
+                    'logged_in': True,
+                    'user_info': user_info
+                }
+                st.session_state.login_loading = False
+                st.session_state.login_attempt = False
+                st.rerun()
+            else:
+                st.session_state.login_loading = False
+                st.session_state.login_attempt = True
+                st.rerun()
+                
+        except Exception as e:
+            st.session_state.login_loading = False
+            st.session_state.login_attempt = True
+            st.error(f"Error en autenticación: {str(e)}")
+            st.rerun()
+    
     else:
+        # Mostrar mensaje de error si hubo un intento fallido
+        if st.session_state.login_attempt:
+            st.error("❌ Credenciales incorrectas o usuario inactivo")
+            st.session_state.login_attempt = False
+        
+        # Formulario de login
         with st.form("login_formulario"):
             st.markdown('<div class="login-form">', unsafe_allow_html=True)
             
@@ -172,14 +212,19 @@ def render_login(sheet_usuarios):
             with col1:
                 st.markdown('<div style="font-size: 1.5rem; padding-top: 10px;">👤</div>', unsafe_allow_html=True)
             with col2:
-                username = st.text_input("Usuario", placeholder="Ingresa tu usuario", label_visibility="collapsed").strip()
+                username = st.text_input("Usuario", placeholder="Ingresa tu usuario", 
+                                       value=st.session_state.login_username,
+                                       label_visibility="collapsed").strip()
             
             # Campo de contraseña con icono
             col1, col2 = st.columns([1, 10])
             with col1:
                 st.markdown('<div style="font-size: 1.5rem; padding-top: 10px;">🔒</div>', unsafe_allow_html=True)
             with col2:
-                password = st.text_input("Contraseña", type="password", placeholder="Ingresa tu contraseña", label_visibility="collapsed")
+                password = st.text_input("Contraseña", type="password", 
+                                       placeholder="Ingresa tu contraseña", 
+                                       value=st.session_state.login_password,
+                                       label_visibility="collapsed")
             
             st.markdown('</div>', unsafe_allow_html=True)
             
@@ -187,12 +232,15 @@ def render_login(sheet_usuarios):
                 if not username or not password:
                     st.error("⚠️ Usuario y contraseña son requeridos")
                 else:
+                    # Guardar credenciales y activar loading
+                    st.session_state.login_username = username
+                    st.session_state.login_password = password
                     st.session_state.login_loading = True
                     st.rerun()
     
     st.markdown("""
         <div class="login-footer">
-            <p>© 2024 Fusion CRM • v2.3.0</p>
+            <p>© 2025 Fusion CRM • v2.3.0</p>
             <p style="font-size: 0.8rem; margin-top: 5px;">Sistema optimizado para gestión eficiente</p>
         </div>
     </div>
