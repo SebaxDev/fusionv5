@@ -1,7 +1,7 @@
 # styles.py - Versión con modo oscuro Monokai y ancho expandido
 """Estilos CSS profesionales tipo CRM con diseño expandido"""
 
-def get_main_styles(dark_mode=True):
+def get_main_styles_v2(dark_mode=True):
     """Devuelve estilos CSS profesionales para modo claro/oscuro con ancho expandido"""
     
     if dark_mode:

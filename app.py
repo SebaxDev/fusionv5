@@ -58,7 +58,7 @@ from components.ui import breadcrumb, metric_card, card, badge, loading_indicato
 from utils.helpers import show_warning, show_error, show_success, show_info, format_phone_number, format_dni, get_current_datetime, format_datetime, truncate_text, is_valid_email, safe_float_conversion, safe_int_conversion, get_status_badge, format_currency, get_breadcrumb_icon
 
 # Utils
-from utils.styles import get_main_styles, get_loading_spinner, loading_indicator
+from utils.styles import get_main_styles_v2, get_loading_spinner, loading_indicator
 from utils.data_manager import safe_get_sheet_data, safe_normalize, update_sheet_data, batch_update_sheet
 from utils.api_manager import api_manager, init_api_session_state
 from utils.pdf_utils import agregar_pie_pdf
@@ -346,7 +346,7 @@ else:
 # 🔹 Inicializar modo oscuro con preferencia persistida
 init_modo_oscuro()
 
-st.markdown(get_main_styles(dark_mode=st.session_state.modo_oscuro), unsafe_allow_html=True)
+st.markdown(get_main_styles_v2(dark_mode=st.session_state.modo_oscuro), unsafe_allow_html=True)
 
 # --------------------------
 # SIDEBAR
