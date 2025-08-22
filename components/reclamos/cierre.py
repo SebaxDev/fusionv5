@@ -185,7 +185,7 @@ def _mostrar_reclamos_en_curso(df_reclamos, df_clientes, sheet_reclamos, sheet_c
         st.info("📭 No hay reclamos en curso en este momento.")
         return False
 
-    # Filtro por técnicos
+    # Filtro por técnicos - USAR SESSION_STATE PARA PERSISTIR
     tecnicos_unicos = sorted(set(
         tecnico.strip().upper()
         for t in en_curso["Técnico"]
@@ -193,11 +193,30 @@ def _mostrar_reclamos_en_curso(df_reclamos, df_clientes, sheet_reclamos, sheet_c
         if tecnico.strip()
     ))
 
-    tecnicos_seleccionados = st.multiselect("👷 Filtrar por técnico asignado", tecnicos_unicos, key="filtro_tecnicos")
+    # Inicializar filtro en session_state si no existe
+    if 'filtro_tecnicos_cierre' not in st.session_state:
+        st.session_state.filtro_tecnicos_cierre = []
+
+    tecnicos_seleccionados = st.multiselect(
+        "👷 Filtrar por técnico asignado", 
+        tecnicos_unicos, 
+        key="filtro_tecnicos_cierre",
+        default=st.session_state.filtro_tecnicos_cierre
+    )
+
+    # Actualizar session_state con la selección actual
+    st.session_state.filtro_tecnicos_cierre = tecnicos_seleccionados
+
+    # Feedback visual del filtro
+    if tecnicos_seleccionados:
+        st.info(f"🔍 Filtrado por técnico(s): {', '.join(tecnicos_seleccionados)}")
 
     if tecnicos_seleccionados:
         en_curso = en_curso[
-            en_curso["Técnico"].apply(lambda t: any(tecnico.strip().upper() in t.upper() for tecnico in tecnicos_seleccionados))
+            en_curso["Técnico"].apply(lambda t: any(
+                tecnico.strip().upper() in t.upper() 
+                for tecnico in tecnicos_seleccionados
+            ))
         ]
 
     st.write("### 📋 Reclamos en curso:")
@@ -224,6 +243,11 @@ def _mostrar_reclamos_en_curso(df_reclamos, df_clientes, sheet_reclamos, sheet_c
                 })
 
     st.markdown("### ✏️ Acciones por reclamo:")
+    
+    # Mostrar mensaje si hay filtro activo
+    if tecnicos_seleccionados:
+        st.info(f"🔍 Filtrado por técnico(s): {', '.join(tecnicos_seleccionados)}")
+    
     cambios = False
     
     for i, row in en_curso.iterrows():
@@ -247,13 +271,15 @@ def _mostrar_reclamos_en_curso(df_reclamos, df_clientes, sheet_reclamos, sheet_c
             with col2:
                 if st.button("✅ Resuelto", key=f"resolver_{row['ID Reclamo']}", use_container_width=True):
                     if _cerrar_reclamo(row, nuevo_precinto, precinto_actual, cliente_info, sheet_reclamos, sheet_clientes):
-                        st.session_state['force_refresh'] = True
+                        # Mantener el filtro activo después del rerun
+                        st.session_state.force_refresh = True
                         st.rerun()
 
             with col3:
                 if st.button("↩️ Pendiente", key=f"volver_{row['ID Reclamo']}", use_container_width=True):
                     if _volver_a_pendiente(row, sheet_reclamos):
-                        st.session_state['force_refresh'] = True
+                        # Mantener el filtro activo después del rerun
+                        st.session_state.force_refresh = True
                         st.rerun()
 
             st.divider()
