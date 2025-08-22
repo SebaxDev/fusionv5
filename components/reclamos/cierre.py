@@ -193,15 +193,16 @@ def _mostrar_reclamos_en_curso(df_reclamos, df_clientes, sheet_reclamos, sheet_c
         if tecnico.strip()
     ))
 
-    # Inicializar filtro en session_state si no existe
-    if 'filtro_tecnicos_cierre' not in st.session_state:
-        st.session_state.filtro_tecnicos_cierre = []
+    # Inicializar filtro en session_state si no existe (usando una clave diferente)
+    if 'filtro_tecnicos_persistente' not in st.session_state:
+        st.session_state.filtro_tecnicos_persistente = []
 
-    # Usar el valor directamente del session_state para el widget
+    # Widget multiselect - Streamlit maneja su propio estado
     tecnicos_seleccionados = st.multiselect(
         "👷 Filtrar por técnico asignado", 
         tecnicos_unicos, 
-        key="filtro_tecnicos_cierre"
+        key="filtro_tecnicos_cierre",
+        default=st.session_state.filtro_tecnicos_persistente
     )
 
     # Feedback visual del filtro
@@ -264,16 +265,16 @@ def _mostrar_reclamos_en_curso(df_reclamos, df_clientes, sheet_reclamos, sheet_c
             with col2:
                 if st.button("✅ Resuelto", key=f"resolver_{row['ID Reclamo']}", use_container_width=True):
                     if _cerrar_reclamo(row, nuevo_precinto, precinto_actual, cliente_info, sheet_reclamos, sheet_clientes):
-                        # Actualizar el filtro en session_state ANTES del rerun
-                        st.session_state.filtro_tecnicos_cierre = tecnicos_seleccionados
+                        # Guardar el filtro actual antes del rerun
+                        st.session_state.filtro_tecnicos_persistente = tecnicos_seleccionados
                         st.session_state.force_refresh = True
                         st.rerun()
 
             with col3:
                 if st.button("↩️ Pendiente", key=f"volver_{row['ID Reclamo']}", use_container_width=True):
                     if _volver_a_pendiente(row, sheet_reclamos):
-                        # Actualizar el filtro en session_state ANTES del rerun
-                        st.session_state.filtro_tecnicos_cierre = tecnicos_seleccionados
+                        # Guardar el filtro actual antes del rerun
+                        st.session_state.filtro_tecnicos_persistente = tecnicos_seleccionados
                         st.session_state.force_refresh = True
                         st.rerun()
 
