@@ -3,7 +3,7 @@ Componente de navegación profesional con iconos y estados activos
 Versión 3.0 - Diseño CRM profesional
 """
 import streamlit as st
-from utils.styles import get_main_styles
+from utils.styles import get_main_styles_v2, get_loading_spinner, loading_indicator
 from utils.permissions import has_permission
 
 def render_sidebar_navigation():
