@@ -93,7 +93,7 @@ def get_main_styles(dark_mode=True):
     
     /* MEJORAS PARA CONTENEDORES PRINCIPALES - ANCHO EXPANDIDO */
     .main .block-container {{
-        max-width: 1800px !important;
+        max-width: 1550px !important;
         padding-top: 2rem;
         padding-bottom: 2rem;
         padding-left: 3rem;
