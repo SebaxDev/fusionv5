@@ -183,6 +183,9 @@ def _mostrar_reclamos_en_curso(df_reclamos, df_clientes, sheet_reclamos, sheet_c
 
     if en_curso.empty:
         st.info("📭 No hay reclamos en curso en este momento.")
+        # Limpiar el filtro si no hay reclamos
+        if 'filtro_tecnicos_persistente' in st.session_state:
+            st.session_state.filtro_tecnicos_persistente = []
         return False
 
     # Filtro por técnicos
@@ -193,11 +196,18 @@ def _mostrar_reclamos_en_curso(df_reclamos, df_clientes, sheet_reclamos, sheet_c
         if tecnico.strip()
     ))
 
-    # Inicializar filtro en session_state si no existe (usando una clave diferente)
+    # Inicializar filtro en session_state si no existe
     if 'filtro_tecnicos_persistente' not in st.session_state:
         st.session_state.filtro_tecnicos_persistente = []
 
-    # Widget multiselect - Streamlit maneja su propio estado
+    # Filtrar los valores por defecto: solo mantener técnicos que existen actualmente
+    filtro_valido = [t for t in st.session_state.filtro_tecnicos_persistente if t in tecnicos_unicos]
+    
+    # Actualizar el session_state con los valores válidos
+    if filtro_valido != st.session_state.filtro_tecnicos_persistente:
+        st.session_state.filtro_tecnicos_persistente = filtro_valido
+
+    # Widget multiselect
     tecnicos_seleccionados = st.multiselect(
         "👷 Filtrar por técnico asignado", 
         tecnicos_unicos, 
