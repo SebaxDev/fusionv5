@@ -1,8 +1,8 @@
-# styles.py - Versión con modo oscuro Monokai
-"""Estilos CSS profesionales tipo CRM"""
+# styles.py - Versión con modo oscuro Monokai y ancho expandido
+"""Estilos CSS profesionales tipo CRM con diseño expandido"""
 
 def get_main_styles(dark_mode=True):
-    """Devuelve estilos CSS profesionales para modo claro/oscuro"""
+    """Devuelve estilos CSS profesionales para modo claro/oscuro con ancho expandido"""
     
     if dark_mode:
         # PALETA MONOKAI (modo oscuro gris)
@@ -147,6 +147,24 @@ def get_main_styles(dark_mode=True):
 
     [data-testid="stSidebarCollapsed"] ~ .main .stColumn {{
         min-width: auto !important;
+    }}
+    
+    /* Para pantallas muy grandes */
+    @media (min-width: 1600px) {{
+        .main .block-container {{
+            max-width: 2000px !important;
+            padding-left: 5rem;
+            padding-right: 5rem;
+        }}
+        
+        .card {{
+            padding: 2rem;
+        }}
+        
+        /* Grid de 4 columnas en lugar de 3 */
+        .stHorizontalBlock > div {{
+            grid-template-columns: repeat(4, 1fr) !important;
+        }}
     }}
     
     /* HEADERS MODERNOS */
@@ -327,6 +345,7 @@ def get_main_styles(dark_mode=True):
         box-shadow: var(--shadow-md);
         border: 1px solid var(--border-color);
         margin: 1rem 0;
+        min-width: 100% !important;
     }}
     
     .dataframe thead th {{
@@ -349,6 +368,18 @@ def get_main_styles(dark_mode=True):
     .dataframe tbody tr:hover td {{
         background-color: var(--bg-secondary);
         transform: scale(1.02);
+    }}
+    
+    /* Mejorar visualización de tablas en modo expandido */
+    .dataframe th, .dataframe td {{
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }}
+    
+    /* Asegurar que los charts ocupen todo el ancho */
+    [data-testid="stSidebarCollapsed"] ~ .main .stPlotlyChart {{
+        width: 100% !important;
     }}
     
     /* NOTIFICACIONES Y ALERTAS MEJORADAS */
@@ -455,11 +486,13 @@ def get_main_styles(dark_mode=True):
     @media (max-width: 768px) {{
         .main .block-container {{
             padding: 1rem;
+            max-width: 100% !important;
         }}
         
         [data-testid="stSidebarCollapsed"] ~ .main .block-container {{
             padding-left: 1rem;
             padding-right: 1rem;
+            max-width: 100% !important;
         }}
         
         .card {{
@@ -476,6 +509,36 @@ def get_main_styles(dark_mode=True):
             font-size: 1.5rem;
             line-height: 2rem;
         }}
+        
+        /* Ajustar grid para móviles */
+        .stHorizontalBlock > div {{
+            grid-template-columns: 1fr !important;
+            gap: 1rem;
+        }}
+    }}
+    
+    /* Botón para toggle sidebar */
+    .sidebar-toggle {{
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        z-index: 9999;
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        box-shadow: var(--shadow-md);
+    }}
+    
+    .sidebar-toggle:hover {{
+        transform: scale(1.1);
     }}
     </style>
     """

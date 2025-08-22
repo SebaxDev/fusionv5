@@ -65,6 +65,17 @@ from utils.pdf_utils import agregar_pie_pdf
 from utils.date_utils import parse_fecha, es_fecha_valida, format_fecha, ahora_argentina
 from utils.permissions import has_permission
 
+# CONFIGURACIÓN DE PÁGINA
+st.set_page_config(
+    page_title="Fusion Reclamos CRM",
+    page_icon="📋",
+    layout="wide",
+    initial_sidebar_state="expanded",
+    menu_items={
+        'About': "Sistema profesional de gestión de reclamos - Fusion CRM v2.3"
+    }
+)
+
 # --------------------------
 # FUNCIONES AUXILIARES OPTIMIZADAS
 # --------------------------

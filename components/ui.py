@@ -1,6 +1,7 @@
 """Componentes de UI reutilizables para una apariencia profesional"""
 
 import streamlit as st
+from datetime import datetime  # ← AÑADIR ESTE IMPORT
 
 def card(title, content, icon=None, actions=None):
     """Componente de tarjeta elegante"""
@@ -25,7 +26,7 @@ def card(title, content, icon=None, actions=None):
     st.markdown("</div>", unsafe_allow_html=True)
 
 def metric_card(value, label, icon, trend=None, subtitle=None):
-    """Tarjeta de métrica elegante mejorada"""
+    """Tarjeta de métrica elegante mejorada - OPTIMIZADA PARA ANCHO EXPANDIDO"""
     trend_html = ""
     if trend:
         trend_icon = "📈" if trend['value'].startswith('+') else "📉"
@@ -40,18 +41,20 @@ def metric_card(value, label, icon, trend=None, subtitle=None):
     
     return f"""
     <div class='card' style='text-align: center; padding: 1.5rem; background: var(--bg-card);
-                            border: 1px solid var(--border-color); transition: all 0.3s ease;'>
+                            border: 1px solid var(--border-color); border-radius: var(--radius-xl);
+                            transition: all 0.3s ease; min-height: 180px; display: flex;
+                            flex-direction: column; justify-content: center;'>
         <div style='font-size: 2.5rem; color: var(--primary-color); margin-bottom: 0.75rem;
                     background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
                     -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>
             {icon}
         </div>
         <div style='font-size: 2rem; font-weight: 700; color: var(--text-primary); 
-                    margin-bottom: 0.5rem;'>
+                    margin-bottom: 0.5rem; line-height: 1.2;'>
             {value}
         </div>
         <div style='color: var(--text-secondary); font-weight: 600; font-size: 1rem;
-                    margin-bottom: 0.5rem;'>
+                    margin-bottom: 0.5rem; line-height: 1.3;'>
             {label}
         </div>
         {subtitle_html}
@@ -87,9 +90,8 @@ def badge(text, type="primary", icon=None):
     </span>
     """
 
-
 def breadcrumb(current_page, show_date=True):
-    """Componente de breadcrumb elegante mejorado"""
+    """Componente de breadcrumb elegante mejorado - OPTIMIZADO PARA ANCHO EXPANDIDO"""
     icons = {
         "Inicio": "🏠",
         "Reclamos cargados": "📊", 
@@ -140,6 +142,7 @@ def breadcrumb(current_page, show_date=True):
         {date_section}
     </div>
     """
+
 def loading_indicator(message="Cargando datos..."):
     """Indicador de carga elegante para componentes UI"""
     return f"""
@@ -161,4 +164,55 @@ def loading_indicator(message="Cargando datos..."):
         100% {{ transform: rotate(360deg); }}
     }}
     </style>
+    """
+
+def grid_container(columns=3, gap="1rem"):
+    """Contenedor de grid optimizado para diseño expandido"""
+    return f"""
+    <div style="
+        display: grid;
+        grid-template-columns: repeat({columns}, 1fr);
+        gap: {gap};
+        width: 100%;
+        margin: 1.5rem 0;
+    ">
+    """
+
+def grid_item():
+    """Item de grid para contenedor"""
+    return "<div style='width: 100%;'>"
+
+def grid_end():
+    """Cierre del contenedor de grid"""
+    return "</div>"
+
+def expandable_section(title, content, expanded=False, icon="📦"):
+    """Sección expandible optimizada para ancho completo"""
+    expand_icon = "▼" if expanded else "►"
+    return f"""
+    <div style="
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        margin: 1rem 0;
+        overflow: hidden;
+    ">
+        <div style="
+            padding: 1rem 1.5rem;
+            background: var(--bg-surface);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        ">
+            <span style="font-size: 1.1rem;">{icon}</span>
+            <span style="flex: 1;">{title}</span>
+            <span style="font-size: 0.9rem;">{expand_icon}</span>
+        </div>
+        <div style="padding: 1.5rem; display: {'block' if expanded else 'none'};">
+            {content}
+        </div>
+    </div>
     """
